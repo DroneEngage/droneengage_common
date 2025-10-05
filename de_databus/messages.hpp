@@ -447,8 +447,26 @@
 #define RemoteCommand_MISSION_COUNT                            507
 #define RemoteCommand_MISSION_CURRENT                          508
 
-// CAMERA MODULE MESSAGES
 
+// SDR Parameters
+#define SDR_ACTION_CONNECT                                  0
+#define SDR_ACTION_DISCONNECT                               1
+#define SDR_ACTION_LIST_SDR_DEVICES                         2
+#define SDR_ACTION_SET_CONFIG                               3
+#define SDR_ACTION_READ_DATA                                4
+#define SDR_ACTION_PAUSE_DATA                               5
+#define SDR_ACTION_SDR_INFO                                 6
+#define SDR_ACTION_TRIGGER                                  7
+
+
+// GPIO Parameters
+#define GPIO_ACTION_PORT_CONFIG                             0
+#define GPIO_ACTION_INFO                                    1
+#define GPIO_ACTION_PORT_WRITE                              2
+#define GPIO_ACTION_PORT_READ                               3
+
+
+// CAMERA MODULE MESSAGES
 #define EXTERNAL_CAMERA_TYPE_UNKNOWN                        0
 #define EXTERNAL_CAMERA_TYPE_RTCWEBCAM                      2
 #define EXTERNAL_CAMERA_SUPPORT_ZOOMING                     0x1
