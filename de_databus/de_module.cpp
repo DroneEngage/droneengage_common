@@ -48,7 +48,7 @@ void de::comm::CModule::sendSYSMSG (const Json_de& jmsg, const int& andruav_mess
 {
     Json_de fullMessage;
 
-    fullMessage[ANDRUAV_PROTOCOL_TARGET_ID]         = SPECIAL_NAME_SYS_NAME; 
+    fullMessage[ANDRUAV_PROTOCOL_TARGET_ID]         = ANDRUAV_PROTOCOL_SENDER_COMM_SERVER; 
     fullMessage[INTERMODULE_ROUTING_TYPE]           = CMD_COMM_SYSTEM;
     fullMessage[ANDRUAV_PROTOCOL_MESSAGE_TYPE]      = andruav_message_id;
     fullMessage[ANDRUAV_PROTOCOL_MESSAGE_CMD]       = jmsg;
