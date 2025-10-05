@@ -222,9 +222,10 @@ void de::comm::CModule::onReceive (const char * message, int len)
     #ifdef DDEBUG        
         std::cout << _INFO_CONSOLE_TEXT << "RX MSG: :len " << std::to_string(len) << ":" << message <<   _NORMAL_CONSOLE_TEXT_ << std::endl;
     #endif
-    
+#ifndef DE_DISABLE_TRY    
     try
     {
+#endif        
         /* code */
         Json_de jMsg = Json_de::parse(message);
         
@@ -289,11 +290,13 @@ void de::comm::CModule::onReceive (const char * message, int len)
         }
 
         if (m_OnReceive!= nullptr) m_OnReceive(message, len, jMsg);
+#ifndef DE_DISABLE_TRY
     }
     catch(const std::exception& e)
     {
         std::cout << "ERROR:" << e.what() << std::endl ;
     }
+#endif
 }
 
 

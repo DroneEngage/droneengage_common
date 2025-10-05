@@ -476,16 +476,17 @@
 #define EXTERNAL_CAMERA_SUPPORT_DUAL_CAM                    0x10
 #define EXTERNAL_CAMERA_SUPPORT_FLASHING                    0x20
 
-#define RemoteCommand_STREAMVIDEO 		                  110
-#define RemoteCommand_RECORDVIDEO 		                  111
-#define RemoteCommand_STREAMVIDEORESUME 	                  112
-#define RemoteCommand_SWITCHCAM 			           114
+
 
 
 
 // Remote Execute Commands
+#define RemoteCommand_ROTATECAM                             105 // Rotate Camera
 #define RemoteCommand_TELEMETRYCTRL                         108 // Telemetry streaming
-#define RemoteCommand_STREAMVIDEO                           110
+#define RemoteCommand_STREAMVIDEO 		                  110
+#define RemoteCommand_RECORDVIDEO 		                  111
+#define RemoteCommand_STREAMVIDEORESUME 	                  112
+#define RemoteCommand_SWITCHCAM 			           114
 #define RemoteCommand_CONNECT_FCB                           118
 
 

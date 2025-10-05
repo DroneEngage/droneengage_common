@@ -87,16 +87,19 @@ void CLocalConfigFile::ReadFile (const char * fileURL)
 
 bool CLocalConfigFile::ParseData (std::string jsonString)
 {
-   try
-   {
+#ifndef DE_DISABLE_TRY
+    try
+    {
+#endif
         m_ConfigJSON = Json_de::parse(removeComments(jsonString));
+#ifndef DE_DISABLE_TRY
    }
    catch(const std::exception& e)
    {
     std::cerr << e.what() << '\n';
     return false;
    }
-
+#endif
    return true;
     
 }

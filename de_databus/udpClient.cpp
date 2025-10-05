@@ -106,7 +106,11 @@ void de::comm::CUDPClient::start()
 {
     // call directly as we are already in a thread.
     if (m_starrted == true)
+#ifndef DE_DISABLE_TRY
         throw "Starrted called twice";
+#else
+    return ;
+#endif
 
     startReceiver();
     startSenderID();
@@ -145,9 +149,10 @@ void de::comm::CUDPClient::stop()
 #ifdef DEBUG
     std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT << "DEBUG: Stop" << _NORMAL_CONSOLE_TEXT_ << std::endl;
 #endif
-
+#ifndef DE_DISABLE_TRY
     try
     {
+#endif
         // pthread_join(m_threadSenderID, NULL); 	// close the thread
         // pthread_join(m_threadCreateUDPSocket, NULL); 	// close the thread
         if (m_starrted)
@@ -163,12 +168,13 @@ void de::comm::CUDPClient::stop()
 #ifdef DEBUG
         std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT << "DEBUG: Stop" << _NORMAL_CONSOLE_TEXT_ << std::endl;
 #endif
+#ifndef DE_DISABLE_TRY
     }
     catch (const std::exception &e)
     {
         // std::cerr << e.what() << '\n';
     }
-
+#endif
 #ifdef DEBUG
     std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT << "DEBUG: Stop" << _NORMAL_CONSOLE_TEXT_ << std::endl;
 #endif
@@ -188,8 +194,10 @@ void de::comm::CUDPClient::InternalReceiverEntry()
 
     while (!m_stopped_called)
     {
+#ifndef DE_DISABLE_TRY
         try
         {
+#endif
             n = recvfrom(m_SocketFD, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *)&cliaddr, &sender_address_size);
 #ifdef DDEBUG
             std::cout << "CUDPClient::InternalReceiverEntry recvfrom" << std::endl;
@@ -255,11 +263,13 @@ void de::comm::CUDPClient::InternalReceiverEntry()
                     break;
                 continue;
             }
+#ifndef DE_DISABLE_TRY
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
         }
+#endif
 #ifdef DDEBUG
         std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT
                   << "DEBUG: InternalReceiverEntry EXIT" << _NORMAL_CONSOLE_TEXT_ << std::endl;
@@ -312,8 +322,10 @@ void de::comm::CUDPClient::sendMSG(const char *msg, const int length)
 
     std::lock_guard<std::mutex> lock(m_lock);
 
+#ifndef DE_DISABLE_TRY
     try
     {
+#endif
         int remainingLength = length;
         int offset = 0;
         int chunk_number = 0;
@@ -359,10 +371,12 @@ void de::comm::CUDPClient::sendMSG(const char *msg, const int length)
             offset += chunkLength;
             chunk_number++;
         }
+#ifndef DE_DISABLE_TRY
     }
     catch (const std::exception &e)
     {
         std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT << "DEBUG: InternelSenderIDEntry EXIT" << _NORMAL_CONSOLE_TEXT_ << std::endl;
         std::cerr << e.what() << '\n';
     }
+#endif
 }

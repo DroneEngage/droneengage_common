@@ -23,13 +23,16 @@ void CConfigFile::initConfigFile (const char* fileURL)
     m_file_url = std::string(fileURL);
     CConfigFile::ReadFile (m_file_url.c_str());
     CConfigFile::ParseData (m_fileContents.str());
-
+#ifndef DE_DISABLE_TRY
     try {
+#endif
         m_lastWriteTime = std::filesystem::last_write_time(m_file_url.c_str());
         std::cout << _INFO_CONSOLE_TEXT << "Initial last write time obtained." << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#ifndef DE_DISABLE_TRY
     } catch (const std::filesystem::filesystem_error& e) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not get initial file write time for '" << m_file_url << "': " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
     }
+#endif
 }
 
 void CConfigFile::reloadFile ()
@@ -37,11 +40,15 @@ void CConfigFile::reloadFile ()
     CConfigFile::ReadFile (m_file_url.c_str());
     CConfigFile::ParseData (m_fileContents.str());
 
+#ifndef DE_DISABLE_TRY
     try {
+#endif
         m_lastWriteTime = std::filesystem::last_write_time(m_file_url.c_str());
+#ifndef DE_DISABLE_TRY
     } catch (const std::filesystem::filesystem_error& e) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not update file write time after reload for '" << m_file_url << "': " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
     }
+#endif
 }
 
 bool CConfigFile::fileUpdated ()
@@ -55,18 +62,21 @@ bool CConfigFile::fileUpdated ()
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Config file does not exist: " << m_file_url << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return false;
     }
-
+#ifndef DE_DISABLE_TRY
     try {
+#endif
         std::filesystem::file_time_type lastWriteTime = std::filesystem::last_write_time(m_file_url.c_str());
         if (lastWriteTime == m_lastWriteTime) return false;
         
         m_lastWriteTime = lastWriteTime;
         std::cout << _INFO_CONSOLE_TEXT << "Initial last write time obtained." << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return true;
+#ifndef DE_DISABLE_TRY
     } catch (const std::filesystem::filesystem_error& e) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not get file write time for '" << m_file_url << "': " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return false;
     }
+#endif
 }
 
 void CConfigFile::ReadFile (const char * fileURL)
@@ -94,7 +104,9 @@ void CConfigFile::ParseData (std::string jsonString)
 
 void CConfigFile::updateJSON(const std::string& jsonString)
 {
+#ifndef DE_DISABLE_TRY
     try {
+#endif
         Json_de updateJson = Json_de::parse(removeComments(jsonString));
         for (const auto& item : updateJson.items()) {
             // Update existing entry or add new entry
@@ -102,10 +114,12 @@ void CConfigFile::updateJSON(const std::string& jsonString)
             std::cout << _INFO_CONSOLE_TEXT << "Updated/Added JSON key: " << item.key() << _NORMAL_CONSOLE_TEXT_ << std::endl;
         }
         saveConfigFile();
+#ifndef DE_DISABLE_TRY
     } catch (const std::exception& e) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Failed to parse update JSON: " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return;
     }
+#endif
 }
 
 void CConfigFile::saveConfigFile()
@@ -118,12 +132,16 @@ void CConfigFile::saveConfigFile()
         timestamp << std::put_time(std::localtime(&now), "%Y%m%d_%H%M%S");
         std::string backup_url = m_file_url + ".bak_" + timestamp.str();
 
+#ifndef DE_DISABLE_TRY
         try {
+#endif
             std::filesystem::copy_file(m_file_url, backup_url, std::filesystem::copy_options::overwrite_existing);
             std::cout << _INFO_CONSOLE_TEXT << "Backup created: " << backup_url << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#ifndef DE_DISABLE_TRY
         } catch (const std::filesystem::filesystem_error& e) {
             std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not create backup file '" << backup_url << "': " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
         }
+#endif
     }
 
     std::ofstream outFile(m_file_url);
@@ -135,9 +153,13 @@ void CConfigFile::saveConfigFile()
     outFile.close();
     std::cout << _SUCCESS_CONSOLE_TEXT_ << "Config file saved successfully: " << m_file_url << _NORMAL_CONSOLE_TEXT_ << std::endl;
 
+#ifndef DE_DISABLE_TRY
     try {
+#endif
         m_lastWriteTime = std::filesystem::last_write_time(m_file_url.c_str());
+#ifndef DE_DISABLE_TRY
     } catch (const std::filesystem::filesystem_error& e) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not update file write time after save for '" << m_file_url << "': " << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
     }
+#endif
 }
