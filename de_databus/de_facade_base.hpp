@@ -21,7 +21,8 @@ namespace comm
             void requestID(const std::string&target_party_id) const;
             void sendErrorMessage (const std::string&target_party_id, const int& error_number, const int& info_type, const int& notification_type, const std::string& description) const;
 
-        
+            void API_sendConfigTemplate(const std::string&  target_party_id, const std::string& module_key, const Json_de& json_file_content_json, const bool reply);
+  
         
         protected:
 

@@ -1,3 +1,4 @@
+#include <string>
 
 #include "../helpers/colors.hpp"
 #include "de_facade_base.hpp"
@@ -49,5 +50,27 @@ void CFacade_Base::sendErrorMessage (const std::string&target_party_id, const in
     
     std::cout << std::endl << _SUCCESS_CONSOLE_BOLD_TEXT_ << " -- sendErrorMessage " << _NORMAL_CONSOLE_TEXT_ << description << std::endl;
     
+    return ;
+}
+
+
+void CFacade_Base::API_sendConfigTemplate(const std::string& target_party_id, const std::string& module_key, const Json_de& json_file_content_json, const bool reply)
+{
+   // Create JSON message
+    Json_de message = {
+        {"a", CONFIG_STATUS_FETCH_CONFIG_TEMPLATE},
+        {"b", json_file_content_json},
+        {"k", module_key},
+        {"R", reply}
+    };
+
+    // Send command
+    m_module.sendJMSG (target_party_id, message, TYPE_AndruavMessage_CONFIG_STATUS, false);
+
+#ifdef DEBUG
+    std::cout << std::endl << _INFO_CONSOLE_TEXT << "API_sendConfigTemplate: module_key:" << module_key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+    std::cout << std::endl << _INFO_CONSOLE_TEXT << "API_sendConfigTemplate: json_file_content_json:" << json_file_content_json.dump() << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#endif    
+
     return ;
 }
