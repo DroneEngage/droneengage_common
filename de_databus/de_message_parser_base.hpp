@@ -24,6 +24,7 @@ namespace de
 
         private:
             void parseDefaultCommand(Json_de &andruav_message, const char *full_message, const int &full_message_length, int messageType, uint32_t permission);
+            void handleConfigAction(Json_de &andruav_message, const Json_de &cmd);
 
         protected:
             bool m_is_binary;
