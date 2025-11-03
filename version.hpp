@@ -1,0 +1,9 @@
+#ifndef DE_COMM_VERSION_H_
+#define DE_COMM_VERSION_H_
+
+
+// BASE DE_COMM_VERSION
+#define DE_COMM_VERSION_STRING     "9.3.0"
+
+
+#endif
