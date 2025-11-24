@@ -396,6 +396,9 @@
 // #define TYPE_AndruavMessage_Sonar_Action            13002
 // #define TYPE_AndruavMessage_Sonar_RemoteExecute     13003
 
+// DEFINE YOUR MESSAGE NUMBER HERE
+#define TYPE_AndruavMessage_USER_RANGE_START 80000
+#define TYPE_AndruavMessage_USER_RANGE_END 90000
 
 // Andruav Mission Types
 #define TYPE_CMissionItem                                    0
@@ -512,6 +515,7 @@
 #define ERROR_TYPE_ERROR_P2P                    23
 #define ERROR_TYPE_ERROR_SDR                    24
 #define ERROR_GEO_FENCE_ERROR                   100
+#define ERROR_USER_DEFINED                      1000
 
 // 0	MAV_SEVERITY_EMERGENCY	System is unusable. This is a "panic" condition.
 #define NOTIFICATION_TYPE_EMERGENCY             0
