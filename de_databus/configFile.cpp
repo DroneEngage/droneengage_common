@@ -1,11 +1,10 @@
 #include <iostream>
 #include <stdlib.h>
-#include <stdio.h>
 #include <sstream>
 #include <fstream>
-#include <memory> 
 #include <iomanip>
 #include <ctime>
+#include <vector>
 #include "../helpers/colors.hpp"
 #include "../helpers/helpers.hpp"
 
@@ -109,9 +108,42 @@ void CConfigFile::updateJSON(const std::string& jsonString)
 #endif
         Json_de updateJson = Json_de::parse(removeComments(jsonString));
         for (const auto& item : updateJson.items()) {
-            // Update existing entry or add new entry
-            m_ConfigJSON[item.key()] = item.value();
-            std::cout << _INFO_CONSOLE_TEXT << "Updated/Added JSON key: " << item.key() << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            std::string key = item.key();
+            
+            // Check if key contains '.' for nested structure (e.g., "follow_me.quad.PID_P_X")
+            if (key.find('.') != std::string::npos) {
+                // Split key by '.' to handle nested structures
+                std::vector<std::string> pathParts;
+                std::stringstream ss(key);
+                std::string part;
+                while (std::getline(ss, part, '.')) {
+                    if (!part.empty()) {
+                        pathParts.push_back(part);
+                    }
+                }
+                
+                if (pathParts.empty()) {
+                    std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Invalid key format: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                    continue;
+                }
+                
+                // Navigate/create nested structure
+                Json_de* currentNode = &m_ConfigJSON;
+                for (size_t i = 0; i < pathParts.size() - 1; ++i) {
+                    if (!currentNode->contains(pathParts[i])) {
+                        (*currentNode)[pathParts[i]] = Json_de::object();
+                    }
+                    currentNode = &((*currentNode)[pathParts[i]]);
+                }
+                
+                // Update the value at the nested location using the last part as the key
+                (*currentNode)[pathParts.back()] = item.value();
+                std::cout << _INFO_CONSOLE_TEXT << "Updated/Added nested JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            } else {
+                // Update existing entry or add new entry at root level
+                m_ConfigJSON[key] = item.value();
+                std::cout << _INFO_CONSOLE_TEXT << "Updated/Added JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            }
         }
         saveConfigFile();
 #ifndef DE_DISABLE_TRY
