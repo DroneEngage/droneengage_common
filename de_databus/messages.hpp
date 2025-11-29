@@ -277,7 +277,7 @@
 /**********************************************************************
                         New Andruav Messages 2019
 **********************************************************************/
-#define TYPE_AndruavMessage_ServoChannel                       6001
+#define TYPE_AndruavMessage_ServoChannel                       6001  // OBSOLETE
 
 #define TYPE_AndruavMessage_MAVLINK                            6502
 #define TYPE_AndruavMessage_SWARM_MAVLINK                      6503
@@ -640,7 +640,8 @@
 #define CONFIG_ACTION_APPLY_CONFIG                          1
 #define CONFIG_REQUEST_FETCH_CONFIG_TEMPLATE                2
 #define CONFIG_REQUEST_FETCH_CONFIG                         3
-#define CONFIG_ACTION_SHUT_DOWN                             4
+#define CONFIG_ACTION_SHUT_DOWN_HW                          4
+#define CONFIG_ACTION_RESTART_HW                            5
 
 #define CONFIG_STATUS_FETCH_CONFIG_TEMPLATE                 0
 #define CONFIG_STATUS_FETCH_CONFIG                          1
