@@ -54,6 +54,34 @@ std::string str_tolower(std::string s) {
 }
 
 
+std::string trimLeft(const std::string &s)
+{
+    std::string result = s;
+    result.erase(result.begin(),
+                 std::find_if(result.begin(), result.end(),
+                              [](unsigned char ch) { return !std::isspace(ch); }));
+    return result;
+}
+
+
+std::string trimRight(const std::string &s)
+{
+    std::string result = s;
+    result.erase(
+        std::find_if(result.rbegin(), result.rend(),
+                     [](unsigned char ch) { return !std::isspace(ch); })
+            .base(),
+        result.end());
+    return result;
+}
+
+
+std::string trim(const std::string &s)
+{
+    return trimRight(trimLeft(s));
+}
+
+
 
 std::vector<std::string> split_string_by_delimeter(const std::string& str, const char& delimeter)
 {
