@@ -36,6 +36,7 @@ void CConfigFile::initConfigFile (const char* fileURL)
 
 void CConfigFile::reloadFile ()
 {
+    m_updatePending = false;
     CConfigFile::ReadFile (m_file_url.c_str());
     CConfigFile::ParseData (m_fileContents.str());
 
@@ -52,6 +53,13 @@ void CConfigFile::reloadFile ()
 
 bool CConfigFile::fileUpdated ()
 {
+    // Check if update was called since last check
+    if (m_updatePending) {
+        m_updatePending = false;
+        std::cout << _INFO_CONSOLE_TEXT << "Config file updated via updateJSON." << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        return true;
+    }
+
     if (m_file_url.empty()) {
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: File URL is empty." << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return false;
@@ -106,6 +114,7 @@ void CConfigFile::updateJSON(const std::string& jsonString)
 #ifndef DE_DISABLE_TRY
     try {
 #endif
+        m_updatePending = true;
         Json_de updateJson = Json_de::parse(removeComments(jsonString));
         for (const auto& item : updateJson.items()) {
             std::string key = item.key();

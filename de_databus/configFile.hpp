@@ -30,7 +30,7 @@ namespace de
             //       due to the compilers behavior to check accessibility
             //       before deleted status
         private:
-            CConfigFile() {}                    // Constructor? (the {} brackets) are needed here.
+            CConfigFile() : m_updatePending(false) {}                    // Constructor? (the {} brackets) are needed here.
 
             // C++ 11
             // =======
@@ -57,6 +57,7 @@ namespace de
             std::stringstream m_fileContents;
             Json_de m_ConfigJSON;
             std::filesystem::file_time_type m_lastWriteTime;
+            bool m_updatePending;
 
     };
 }
