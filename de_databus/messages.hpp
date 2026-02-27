@@ -606,18 +606,26 @@
 #define SPECIAL_NAME_VEHICLE_RECEIVERS  "_drone_"
 #define SPECIAL_NAME_GCS_RECEIVERS      "_gcs_"
 
+#define TRACKING_CAMERA_DIRECTION_NONE      0
+#define TRACKING_CAMERA_DIRECTION_FRONT     1
+#define TRACKING_CAMERA_DIRECTION_BACK      2
+#define TRACKING_CAMERA_DIRECTION_DOWN      3
+#define TRACKING_CAMERA_DIRECTION_UP        4
+
 // TYPE_AndruavMessage_TrackingTarget_ACTION
-#define TrackingTarget_ACTION_TRACKING_POINT    0
-#define TrackingTarget_ACTION_TRACKING_REGION   1
-#define TrackingTarget_ACTION_TRACKING_STOP     2
-#define TrackingTarget_ACTION_TRACKING_PAUSE    3
-#define TrackingTarget_ACTION_TRACKING_ENABLE   4 
+#define TrackingTarget_ACTION_TRACKING_POINT            0
+#define TrackingTarget_ACTION_TRACKING_REGION           1
+#define TrackingTarget_ACTION_TRACKING_STOP             2
+#define TrackingTarget_ACTION_TRACKING_PAUSE            3
+#define TrackingTarget_ACTION_TRACKING_ENABLE           4 
+#define TrackingTarget_ACTION_TRACKING_QUERY_CONFIG     5
 
 // TYPE_AndruavMessage_TargetTracking_STATUS
 #define TrackingTarget_STATUS_TRACKING_LOST     0
 #define TrackingTarget_STATUS_TRACKING_DETECTED 1
 #define TrackingTarget_STATUS_TRACKING_ENABLED  2
 #define TrackingTarget_STATUS_TRACKING_STOPPED  3
+#define TrackingTarget_STATUS_TRACKING_CONFIG   4
 
 
 // TYPE_AndruavMessage_TrackingTarget_ACTION

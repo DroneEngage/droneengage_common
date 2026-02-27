@@ -20,6 +20,12 @@ int wait_time_nsec (const time_t& seconds, const long& nano_seconds);
 
 std::string str_tolower(std::string s);
 
+std::string trimLeft(const std::string &s);
+
+std::string trimRight(const std::string &s);
+
+std::string trim(const std::string &s);
+
 std::vector<std::string> split_string_by_delimeter(const std::string& str, const char& delimeter);
 
 std::vector<std::string> split_string_by_newline(const std::string& str);
