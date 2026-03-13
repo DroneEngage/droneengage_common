@@ -220,6 +220,7 @@
 #define TYPE_AndruavMessage_Sync_EventFire              1061
 #define TYPE_AndruavMessage_SearchTargetList            1062
 
+
 //! NOT USED YET
 #define TYPE_AndruavMessage_Prepherials                 1070
 /**
@@ -268,8 +269,7 @@
 
 #define TYPE_AndruavMessage_Viewlink_ACTION                    1079
 #define TYPE_AndruavMessage_Viewlink_STATUS                    1080
-
-
+#define TYPE_AndruavMessage_DEPilot_Control                    1081
 
 //Binary Starts with 2000
 
