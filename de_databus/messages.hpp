@@ -622,12 +622,13 @@
 #define TrackingTarget_ACTION_TRACKING_QUERY_CONFIG     5
 
 // TYPE_AndruavMessage_TargetTracking_STATUS
-#define TrackingTarget_STATUS_TRACKING_LOST     0
-#define TrackingTarget_STATUS_TRACKING_DETECTED 1
-#define TrackingTarget_STATUS_TRACKING_ENABLED  2
-#define TrackingTarget_STATUS_TRACKING_STOPPED  3
-#define TrackingTarget_STATUS_TRACKING_CONFIG   4
-
+#define TrackingTarget_STATUS_TRACKING_LOST                    0
+#define TrackingTarget_STATUS_TRACKING_DETECTED                1
+#define TrackingTarget_STATUS_TRACKING_ENABLED                 2
+#define TrackingTarget_STATUS_TRACKING_STOPPED                 3
+#define TrackingTarget_STATUS_TRACKING_CONFIG                  4
+#define TrackingTarget_STATUS_TRACKING_AI_DRIVER_ENABLED       5
+#define TrackingTarget_STATUS_TRACKING_AI_DRIVER_DISABLED      6
 
 // TYPE_AndruavMessage_TrackingTarget_ACTION
 #define TrackingTarget_ACTION_AI_Recognition_POINT          0
