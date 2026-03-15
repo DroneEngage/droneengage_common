@@ -160,7 +160,7 @@
 #define TYPE_AndruavMessage_ConfigFCB               1039
 #define TYPE_AndruavMessage_ChangeSpeed             1040
 #define TYPE_AndruavMessage_Ctrl_Cameras            1041
-#define TYPE_AndruavMessage_TrackingTarget_ACTION   1042
+#define TYPE_AndruavMessage_TargetTracking_ACTION   1042
 #define TYPE_AndruavMessage_TrackingTargetLocation  1043
 #define TYPE_AndruavMessage_TargetTracking_STATUS   1044
 #define TYPE_AndruavMessage_UploadWayPoints         1046
@@ -630,21 +630,21 @@
 #define TrackingTarget_STATUS_TRACKING_STOPPED                 3
 #define TrackingTarget_STATUS_TRACKING_CONFIG                  4
 
-// TYPE_AndruavMessage_TrackingTarget_ACTION
-#define TrackingTarget_ACTION_AI_Recognition_POINT          0
-#define TrackingTarget_ACTION_AI_Recognition_SEARCH         1
-#define TrackingTarget_ACTION_AI_Recognition_DISABLE        2
-#define TrackingTarget_ACTION_AI_Recognition_ENABLE         3
-#define TrackingTarget_ACTION_AI_Recognition_CLASS_LIST     4
+// TYPE_AndruavMessage_TargetTracking_ACTION
+#define TargetTracking_ACTION_AI_Recognition_POINT          0
+#define TargetTracking_ACTION_AI_Recognition_SEARCH         1
+#define TargetTracking_ACTION_AI_Recognition_DISABLE        2
+#define TargetTracking_ACTION_AI_Recognition_ENABLE         3
+#define TargetTracking_ACTION_AI_Recognition_CLASS_LIST     4
 
 
 
 // TYPE_AndruavMessage_AI_Recognition_STATUS
-#define TrackingTarget_STATUS_AI_Recognition_LOST           0
-#define TrackingTarget_STATUS_AI_Recognition_DETECTED       1
-#define TrackingTarget_STATUS_AI_Recognition_ENABLED        2
-#define TrackingTarget_STATUS_AI_Recognition_DISABLED       3
-#define TrackingTarget_STATUS_AI_Recognition_CLASS_LIST     4
+#define TargetTracking_STATUS_AI_Recognition_LOST           0
+#define TargetTracking_STATUS_AI_Recognition_DETECTED       1
+#define TargetTracking_STATUS_AI_Recognition_ENABLED        2
+#define TargetTracking_STATUS_AI_Recognition_DISABLED       3
+#define TargetTracking_STATUS_AI_Recognition_CLASS_LIST     4
 
 
 // TYPE_AndruavMessage_CONFIG_ACTION
