@@ -16,4 +16,6 @@
 #define DRONE_HOME_SET "d_f_hs"
 #define DRONE_MISSION_STARTED "d_f_ms"
 #define DRONE_MISSION_COMPLETED "d_f_mc"
+#define DRONE_DEPILOT_MODE_ACTIVATED "d_f_de_a"
+#define DRONE_DEPILOT_SUBOPERATION_UPDATED "d_f_de_s"
 

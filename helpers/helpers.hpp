@@ -8,6 +8,7 @@
 #include <vector>
 #include <sstream>
 #include <math.h>
+#include <functional>
 
 #include "json_nlohmann.hpp"
 using Json_de = nlohmann::json;
@@ -55,5 +56,7 @@ int signum(T x) {
 }
 
 double roundToPrecision(double value, int decimalPlaces);
+
+extern std::function<bool(const char*)> read_env_flag;
 
 #endif
