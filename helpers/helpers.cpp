@@ -236,3 +236,11 @@ std::function<bool(const char*)> read_env_flag = [](const char* name) -> bool
 
         return false;
     };
+
+bool isLocalhost(const std::string& ip)
+{
+    std::string ip_lower = str_tolower(ip);
+    return (ip_lower == "127.0.0.1" || 
+            ip_lower == "::1" || 
+            ip_lower == "localhost");
+}

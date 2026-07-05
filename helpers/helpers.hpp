@@ -59,4 +59,11 @@ double roundToPrecision(double value, int decimalPlaces);
 
 extern std::function<bool(const char*)> read_env_flag;
 
+/**
+ * @brief Check if an IP address is localhost (127.0.0.1, ::1, or "localhost")
+ * @param ip The IP address string to check
+ * @return true if the IP is localhost
+ */
+bool isLocalhost(const std::string& ip);
+
 #endif

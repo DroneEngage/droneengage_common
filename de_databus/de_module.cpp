@@ -24,13 +24,27 @@ void de::comm::CModule::defineModule (
 }
 
 
-bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort,  int chunkSize)
+bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort,  int chunkSize, bool use_unix_socket)
 {
-    // UDP Server
-    cUDPClient.init(targetIP.c_str(), broadcatsPort, host.c_str() ,listenningPort, chunkSize);
+    // Determine transport type based on config and target IP
+    m_use_unix_socket = use_unix_socket && isLocalhost(targetIP);
     
-    createJSONID(true);
-    cUDPClient.start();
+    if (m_use_unix_socket) {
+        // Unix domain socket for localhost communication
+        std::string brokerSocketPath = "/tmp/de_comm_broker.sock";
+        std::string ownSocketPath = "/tmp/de_comm_" + m_module_id + ".sock";
+        
+        cUnixDgramClient.init(brokerSocketPath.c_str(), ownSocketPath.c_str(), chunkSize);
+        createJSONID(true);
+        cUnixDgramClient.setJsonId(m_json_id);
+        cUnixDgramClient.start();
+    } else {
+        // UDP for cross-board or when Unix socket is disabled
+        cUDPClient.init(targetIP.c_str(), broadcatsPort, host.c_str() ,listenningPort, chunkSize);
+        createJSONID(true);
+        cUDPClient.setJsonId(m_json_id);
+        cUDPClient.start();
+    }
 
     return true;
 }
@@ -38,7 +52,11 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
 
 bool de::comm::CModule::uninit ()
 {
-    cUDPClient.stop();
+    if (m_use_unix_socket) {
+        cUnixDgramClient.stop();
+    } else {
+        cUDPClient.stop();
+    }
 
     return true;
 }

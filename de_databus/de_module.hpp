@@ -7,7 +7,9 @@
 
 #include "../helpers/json_nlohmann.hpp"
 #include "udpClient.hpp"
+#include "unixDgramClient.hpp"
 #include "messages.hpp"
+#include "../helpers/helpers.hpp"
 using Json_de = nlohmann::json;
 
 typedef enum {
@@ -99,8 +101,13 @@ namespace comm
         
             void sendMSG (const char * msg, const int length)
                 {
-                    if (!cUDPClient.isStarted()) return ;
-                    cUDPClient.sendMSG (msg, length);
+                    if (m_use_unix_socket) {
+                        if (!cUnixDgramClient.isStarted()) return;
+                        cUnixDgramClient.sendMSG(msg, length);
+                    } else {
+                        if (!cUDPClient.isStarted()) return;
+                        cUDPClient.sendMSG(msg, length);
+                    }
                 }
 
 
@@ -241,7 +248,9 @@ namespace comm
 
             std::time_t m_instance_time_stamp;
     
-            CUDPClient cUDPClient; 
+            CUDPClient cUDPClient;
+            CUnixDgramClient cUnixDgramClient;
+            bool m_use_unix_socket;
 
             /**
              * @brief DroneEngage Current m_party_id read from communicator
