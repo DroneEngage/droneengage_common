@@ -32,7 +32,7 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
     if (m_use_unix_socket) {
         // Unix domain socket for localhost communication
         std::string brokerSocketPath = "/tmp/de_comm_broker.sock";
-        std::string ownSocketPath = "/tmp/de_comm_" + m_module_id + ".sock";
+        std::string ownSocketPath = "/tmp/de_comm_" + m_module_id + "_" + m_module_key + ".sock";
         
 #ifdef DEBUG
         std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using Unix socket. broker:" << brokerSocketPath << " own:" << ownSocketPath << _NORMAL_CONSOLE_TEXT_ << std::endl;
