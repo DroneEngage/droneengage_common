@@ -60,7 +60,7 @@ namespace comm
 
         private:
 
-            CModule(): cUDPClient(this)
+            CModule(): cUDPClient(this), cUnixDgramClient(this)
             {
                 m_instance_time_stamp = std::time(nullptr);
                 m_hardware_serial = "";
@@ -78,7 +78,7 @@ namespace comm
                  Json_de message_filter
             );
             
-            bool init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort, int chunkSize) ;
+            bool init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort, int chunkSize, bool use_unix_socket = false) ;
             bool uninit ();
             
 

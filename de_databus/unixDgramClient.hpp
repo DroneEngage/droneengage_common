@@ -1,9 +1,11 @@
 #ifndef CUNIXDGRAMCLIENT_H
 #define CUNIXDGRAMCLIENT_H
 
+#include <string>
 #include <thread>
 #include <mutex>
 #include <sys/un.h>
+#include "udpClient.hpp"
 
 #ifndef MAXLINE
 #define MAXLINE 65507
@@ -14,11 +16,6 @@
 
 namespace de {
 namespace comm {
-
-class CCallBack_UDPClient {
-    public:
-        virtual void onReceive(const char *, int len) {};
-};
 
 class CUnixDgramClient {
     public:

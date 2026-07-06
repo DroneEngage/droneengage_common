@@ -138,6 +138,80 @@ https://windsurf.com/codemaps/c0a6e865-aaee-48ba-9658-2b9e1ee231b8-bf8b4864a72d0
 
 This protocol allows DroneEngage modules to exchange arbitrarily sized messages reliably over UDP using a simple chunking and reassembly scheme, while also supporting automatic module discovery through periodic ID broadcasting.
 
+## Unix Domain Socket Client Communication Protocol
+
+The module also provides a Unix Domain Socket (AF_UNIX, SOCK_DGRAM) implementation as an alternative to UDP for local inter-process communication. This implementation shares the same chunking protocol and callback architecture as the UDP client but uses filesystem paths for addressing instead of IP addresses and ports.
+
+### Key Differences from UDP Client
+
+- **Addressing**: Uses socket file paths (module-specific, configured at runtime) instead of IP:port pairs
+- **Transport**: Unix domain sockets (AF_UNIX) instead of UDP (AF_INET)
+- **Performance**: Faster than UDP for local inter-process communication (no network stack overhead, no packet loss)
+- **Configuration**: Must be enabled via `use_unix_socket: true` in module configuration file
+- **Cleanup**: Properly removes socket files on shutdown
+- **Graceful shutdown**: Uses `shutdown()` to unblock `recvfrom()` in receiver thread
+
+### Initialization and Startup
+
+- **Socket path configuration**
+  - `init(brokerSocketPath, ownSocketPath, chunkSize)` sets up the socket paths
+  - `brokerSocketPath`: Path to the broker/de_comm socket
+  - `ownSocketPath`: Path for this module's socket
+  - `chunkSize`: Maximum chunk size for message splitting
+- **Socket setup**
+  - Creates Unix domain socket with `socket(AF_UNIX, SOCK_DGRAM, 0)`
+  - Binds to `ownSocketPath` after removing any stale socket file
+- **Thread startup**
+  - Receiver thread (`InternalReceiverEntry`) blocks on `recvfrom()`
+  - Sender-ID thread (`InternelSenderIDEntry`) broadcasts module ID periodically
+
+### Message Sending with Chunking
+
+- **Shared chunking protocol**
+  - Uses `chunk_protocol::prepareChunkHeader()` for header encoding
+  - Uses `chunk_protocol::parseChunkNumber()` and `chunk_protocol::isEndChunk()` for parsing
+  - Uses `chunk_protocol::reassembleChunks()` for message reconstruction
+- **Transmission**
+  - Chunks sent via `sendto()` to broker socket path
+  - **No delay between chunks** (local IPC, no packet loss)
+  - Thread-safe sending protected by mutex
+
+### Reception and Reassembly
+
+- **Receiver loop**
+  - Blocks on `recvfrom()` for incoming datagrams
+  - Tracks sender address (`struct sockaddr_un`)
+- **Chunk processing**
+  - Parses chunk header using shared `chunk_protocol` helpers
+  - Clears chunks on new sequence (chunk number 0)
+  - Stores payload data excluding 2-byte header
+- **Message reconstruction**
+  - Uses `chunk_protocol::reassembleChunks()` to concatenate chunks
+  - Adds null terminator for string compatibility
+  - Delivers via callback interface
+
+### Graceful Shutdown
+
+- **Socket shutdown**
+  - Calls `shutdown(SHUT_RDWR)` to unblock `recvfrom()`
+  - Joins receiver and sender threads
+  - Closes socket file descriptor
+- **Cleanup**
+  - Removes socket file using `unlink()`
+  - Frees address structures
+
+### Integration with DE Modules
+
+- **Callback interface**
+  - Uses same `CCallBack_UDPClient` interface as UDP client
+  - Modules implement `onReceive()` for message handling
+- **API compatibility**
+  - Same public API: `init()`, `start()`, `stop()`, `sendMSG()`, `setJsonId()`
+  - `isStarted()` for status checking
+- **Shared protocol**
+  - Chunking protocol is identical to UDP implementation
+  - Modules can switch between UDP and Unix socket without protocol changes
+
 ## UDP Client Protocol Diagram
 
 ```text

@@ -1,10 +1,13 @@
 #include "unixDgramClient.hpp"
 #include "chunk_protocol.hpp"
 #include "../helpers/colors.hpp"
+#include <iostream>
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <chrono>
+#include <map>
 
 namespace de {
 namespace comm {
@@ -69,6 +72,10 @@ void CUnixDgramClient::stop() {
     
     m_stopped_called = true;
     
+    if (m_SocketFD >= 0) {
+        shutdown(m_SocketFD, SHUT_RDWR);
+    }
+    
     if (m_threadCreateUnixSocket.joinable()) {
         m_threadCreateUnixSocket.join();
     }
@@ -127,7 +134,7 @@ void CUnixDgramClient::sendMSG(const char* msg, const int length) {
             std::memcpy(chunkMsg + 2 * sizeof(uint8_t), msg + offset, chunkLength);
 
             const int sent = sendto(m_SocketFD, chunkMsg, chunkLength + 2 * sizeof(uint8_t),
-                              MSG_CONFIRM, (const struct sockaddr*)m_BrokerAddress,
+                              0, (const struct sockaddr*)m_BrokerAddress,
                               sizeof(struct sockaddr_un));
 
             if (sent < 0) {
@@ -160,8 +167,13 @@ void CUnixDgramClient::InternalReceiverEntry() {
     std::cout << "CUnixDgramClient::InternalReceiverEntry called" << std::endl;
 #endif
 
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(m_SocketFD, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
     struct sockaddr_un cliaddr;
-    std::vector<std::vector<uint8_t>> receivedChunks;
+    std::map<std::string, std::vector<std::vector<uint8_t>>> receivedChunksBySource;
 
 #ifndef DE_DISABLE_TRY
     try {
@@ -184,14 +196,15 @@ void CUnixDgramClient::InternalReceiverEntry() {
                 const bool end = chunk_protocol::isEndChunk(chunkNumber);
 
                 if (chunkNumber == 0)
-                    receivedChunks.clear();
+                    receivedChunksBySource[cliaddr.sun_path].clear();
 
-                // Store the received chunk
-                receivedChunks.emplace_back(buffer + 2 * sizeof(uint8_t), buffer + n);
+                // Store the received chunk in the map
+                std::vector<std::vector<uint8_t>>& chunkVector = receivedChunksBySource[cliaddr.sun_path];
+                chunkVector.emplace_back(buffer + 2 * sizeof(uint8_t), buffer + n);
 
                 if (end) {
                     // Reassemble chunks using shared helper
-                    std::vector<uint8_t> concatenatedData = chunk_protocol::reassembleChunks(receivedChunks);
+                    std::vector<uint8_t> concatenatedData = chunk_protocol::reassembleChunks(chunkVector);
                     
                     // Add null terminator for compatibility
                     concatenatedData.push_back(0);
@@ -201,12 +214,15 @@ void CUnixDgramClient::InternalReceiverEntry() {
                         m_callback->onReceive((const char*)concatenatedData.data(), concatenatedData.size());
                     }
 
-                    receivedChunks.clear();
+                    // Clear the map for the next set of chunks
+                    receivedChunksBySource[cliaddr.sun_path].clear();
                 }
             }
             else {
-#ifdef DEBUG
-                std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "recvfrom failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#ifdef DEBUG_UNIX
+                if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                    std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "recvfrom failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                }
 #endif
                 if (m_stopped_called)
                     break;

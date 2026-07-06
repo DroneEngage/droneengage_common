@@ -34,15 +34,19 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
         std::string brokerSocketPath = "/tmp/de_comm_broker.sock";
         std::string ownSocketPath = "/tmp/de_comm_" + m_module_id + ".sock";
         
+#ifdef DEBUG
+        std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using Unix socket. broker:" << brokerSocketPath << " own:" << ownSocketPath << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#endif
         cUnixDgramClient.init(brokerSocketPath.c_str(), ownSocketPath.c_str(), chunkSize);
         createJSONID(true);
-        cUnixDgramClient.setJsonId(m_json_id);
         cUnixDgramClient.start();
     } else {
         // UDP for cross-board or when Unix socket is disabled
+#ifdef DEBUG
+        std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using UDP. targetIP:" << targetIP << " port:" << broadcatsPort << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#endif
         cUDPClient.init(targetIP.c_str(), broadcatsPort, host.c_str() ,listenningPort, chunkSize);
         createJSONID(true);
-        cUDPClient.setJsonId(m_json_id);
         cUDPClient.start();
     }
 
@@ -371,7 +375,11 @@ void de::comm::CModule::createJSONID (bool reSend)
             //std::cout << json_msg.dump(4) << std::endl;              
         #endif
 
-        cUDPClient.setJsonId (json_msg.dump());
+        if (m_use_unix_socket) {
+            cUnixDgramClient.setJsonId(json_msg.dump());
+        } else {
+            cUDPClient.setJsonId(json_msg.dump());
+        }
 
         return ;
 }
