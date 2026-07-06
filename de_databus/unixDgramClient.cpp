@@ -133,16 +133,34 @@ void CUnixDgramClient::sendMSG(const char* msg, const int length) {
 
             std::memcpy(chunkMsg + 2 * sizeof(uint8_t), msg + offset, chunkLength);
 
-            const int sent = sendto(m_SocketFD, chunkMsg, chunkLength + 2 * sizeof(uint8_t),
+            int sent = sendto(m_SocketFD, chunkMsg, chunkLength + 2 * sizeof(uint8_t),
                               0, (const struct sockaddr*)m_BrokerAddress,
                               sizeof(struct sockaddr_un));
 
             if (sent < 0) {
-                std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "sendto failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
-                break;
+                // Retry on ENOENT (broker socket not yet created) with exponential backoff
+                if (errno == ENOENT && chunk_number == 0) {
+                    for (int retry = 0; retry < 5; ++retry) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100 * (1 << retry)));
+                        sent = sendto(m_SocketFD, chunkMsg, chunkLength + 2 * sizeof(uint8_t),
+                                      0, (const struct sockaddr*)m_BrokerAddress,
+                                      sizeof(struct sockaddr_un));
+                        if (sent >= 0) break;
+                    }
+                }
+                if (sent < 0) {
+                    std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "sendto failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                    break;
+                }
             }
 
-            // No delay needed for Unix domain sockets (local IPC, no packet loss)
+            if (remainingLength != 0)
+            {
+                // fast sending causes packet loss even on Unix domain sockets
+                // (bounded SO_RCVBUF can overflow just like UDP).
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
             offset += chunkLength;
             chunk_number++;
         }
