@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DroneEngage/droneengage_common)
+
 # de_common Module
 
 This is the core module of all plugins in the DroneEngage ecosystem.
