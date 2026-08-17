@@ -19,3 +19,4 @@
 #define DRONE_DEPILOT_MODE_ACTIVATED "d_f_de_a"
 #define DRONE_DEPILOT_SUBOPERATION_UPDATED "d_f_de_s"
 
+#define DRONE_FENCE_ACTION "onFenceAction"
