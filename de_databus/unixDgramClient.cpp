@@ -27,6 +27,12 @@ CUnixDgramClient::~CUnixDgramClient() {
 }
 
 void CUnixDgramClient::init(const char* brokerSocketPath, const char* ownSocketPath, int chunkSize) {
+    if (chunkSize <= 0)
+    {
+        std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Invalid chunk size (must be > 0): " << chunkSize << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     m_chunkSize = chunkSize;
     
     // Create own socket address

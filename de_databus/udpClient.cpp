@@ -54,6 +54,12 @@ void de::comm::CUDPClient::init(const char *targetIP, int broadcatsPort, const c
         exit(EXIT_FAILURE);
     }
 
+    if (chunkSize <= 0)
+    {
+        std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Invalid UDP packet size (must be > 0): " << chunkSize << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     m_chunkSize = chunkSize;
 
     // Create socket
