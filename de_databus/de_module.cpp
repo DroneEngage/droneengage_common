@@ -26,6 +26,22 @@ void de::comm::CModule::defineModule (
 
 bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort,  int chunkSize, bool use_unix_socket)
 {
+    // Auto-detect chunk size when not explicitly configured (chunkSize <= 0).
+    // Modules pass 0 when s2s_udp_packet_size is missing from their config.
+    // Loopback (MTU 65536) can use the full default; non-loopback targets
+    // are capped at SAFE_REMOTE_UDP_PAYLOAD to avoid IP fragmentation.
+    // If the user explicitly sets s2s_udp_packet_size, that value is used as-is.
+    if (chunkSize <= 0)
+    {
+        if (isLocalhost(targetIP)) {
+            chunkSize = DEFAULT_UDP_DATABUS_PACKET_SIZE;
+        } else {
+            chunkSize = SAFE_REMOTE_UDP_PAYLOAD;
+        }
+        std::cout << _INFO_CONSOLE_TEXT << "Auto chunk size: " << chunkSize
+                  << " (target " << targetIP << ")" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+    }
+
     // Determine transport type based on config and target IP
     m_use_unix_socket = use_unix_socket && isLocalhost(targetIP);
     

@@ -12,6 +12,9 @@
 
 #define MAX_UDP_DATABUS_PACKET_SIZE 0xffff
 #define DEFAULT_UDP_DATABUS_PACKET_SIZE 8192
+// Safe payload for standard Ethernet MTU 1500 (1500 - 20 IP - 8 UDP).
+// Used when auto-detecting chunk size for non-loopback targets.
+#define SAFE_REMOTE_UDP_PAYLOAD 1472
 
 namespace de
 {
