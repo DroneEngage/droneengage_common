@@ -368,6 +368,7 @@
  */
 #define TYPE_AndruavMessage_LocalServer_ACTION                 6522
 #define TYPE_AndruavMessage_LocalServer_STATUS                 6523
+//TODO: use Action instead of Remote execute in all similar messages
 #define TYPE_AndruavMessage_LocalServer_REMOTE_EXECUTE         6524
 
 #define TYPE_AndruavMessage_CONFIG_ACTION                      6525
@@ -375,7 +376,8 @@
 
 #define TYPE_AndruavMessage_MAVLINK_EVENTS                     6527
 
-// 6528-6529 reserved for IR_CAMERA_MI48_* (de_comm, to be reconciled later)
+#define TYPE_AndruavMessage_IR_CAMERA_MI48_ACTION              6528
+#define TYPE_AndruavMessage_IR_CAMERA_MI48_STATUS              6529
 #define TYPE_AndruavMessage_SOUND_LIST                         6530
 
 #define TYPE_AndruavMessage_DUMMY                              9999

@@ -35,8 +35,9 @@ typedef enum {
 #define MODULE_CLASS_GENERIC                    "gen"
 #define MODULE_CLASS_GPIO                       "gpio" 
 #define MODULE_CLASS_A_RECOGNITION              "ai_rec" 
-#define MODULE_CLASS_TRACKING                   "trk"  
-#define MODULE_CLASS_VIEWLINK                   "vlk" 
+#define MODULE_CLASS_TRACKING                   "trk"
+#define MODULE_CLASS_VIEWLINK                   "vlk"
+#define MODULE_CLASS_IR_MI48_CAMERA             "ir"
 
 
 namespace de
