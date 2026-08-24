@@ -46,16 +46,26 @@ namespace de
             std::string getFileName () const {return m_file_url;};
             void updateJSON(const std::string& jsonString);
             void saveConfigFile();
-            
+
+            // Merge a local override JSON (e.g. from the gitignored *.local
+            // file managed by CLocalConfigFile) on top of the in-memory
+            // runtime config. The published base config is left untouched so
+            // that saveConfigFile() never leaks local overrides into the
+            // published file. Call once after initConfigFile() and again
+            // after any reloadFile(). Deep-merges nested objects.
+            void applyLocalOverrides(const Json_de& localJson);
+
         protected:
             void ReadFile (const char * fileURL);
             void ParseData (std::string jsonString);
-            
+
 
         private:
             std::string m_file_url;
             std::stringstream m_fileContents;
-            Json_de m_ConfigJSON;
+            Json_de m_ConfigJSON;          // runtime config (base + local overrides)
+            Json_de m_BaseJSON;            // pristine published config (what gets saved)
+            Json_de m_LocalOverrides;      // last applied local overrides (for reloadFile)
             std::filesystem::file_time_type m_lastWriteTime;
             bool m_updatePending;
 

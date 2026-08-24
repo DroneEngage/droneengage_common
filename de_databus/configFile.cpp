@@ -22,6 +22,7 @@ void CConfigFile::initConfigFile (const char* fileURL)
     m_file_url = std::string(fileURL);
     CConfigFile::ReadFile (m_file_url.c_str());
     CConfigFile::ParseData (m_fileContents.str());
+    m_BaseJSON = m_ConfigJSON;   // pristine published config kept for saves
 #ifndef DE_DISABLE_TRY
     try {
 #endif
@@ -39,6 +40,13 @@ void CConfigFile::reloadFile ()
     m_updatePending = false;
     CConfigFile::ReadFile (m_file_url.c_str());
     CConfigFile::ParseData (m_fileContents.str());
+    m_BaseJSON = m_ConfigJSON;   // published file changed on disk -> reset base
+    // Re-apply local overrides on top of the freshly loaded base so device
+    // specific settings survive an external edit of the published config.
+    if (!m_LocalOverrides.is_null())
+    {
+        applyLocalOverrides(m_LocalOverrides);
+    }
 
 #ifndef DE_DISABLE_TRY
     try {
@@ -109,6 +117,51 @@ void CConfigFile::ParseData (std::string jsonString)
     std::cout << _SUCCESS_CONSOLE_TEXT_ << " config file parsed successfully " << _NORMAL_CONSOLE_TEXT_ << std::endl;
 }
 
+// Apply a flat or dotted-key update JSON onto `target`. Used to mirror UI
+// edits into both the runtime config (m_ConfigJSON) and the pristine base
+// (m_BaseJSON) so saves persist edits without leaking local overrides.
+static void applyUpdateJSON(Json_de& target, const Json_de& updateJson)
+{
+    for (const auto& item : updateJson.items()) {
+        std::string key = item.key();
+
+        // Check if key contains '.' for nested structure (e.g., "follow_me.quad.PID_P_X")
+        if (key.find('.') != std::string::npos) {
+            // Split key by '.' to handle nested structures
+            std::vector<std::string> pathParts;
+            std::stringstream ss(key);
+            std::string part;
+            while (std::getline(ss, part, '.')) {
+                if (!part.empty()) {
+                    pathParts.push_back(part);
+                }
+            }
+
+            if (pathParts.empty()) {
+                std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Invalid key format: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                continue;
+            }
+
+            // Navigate/create nested structure
+            Json_de* currentNode = &target;
+            for (size_t i = 0; i < pathParts.size() - 1; ++i) {
+                if (!currentNode->contains(pathParts[i])) {
+                    (*currentNode)[pathParts[i]] = Json_de::object();
+                }
+                currentNode = &((*currentNode)[pathParts[i]]);
+            }
+
+            // Update the value at the nested location using the last part as the key
+            (*currentNode)[pathParts.back()] = item.value();
+            std::cout << _INFO_CONSOLE_TEXT << "Updated/Added nested JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        } else {
+            // Update existing entry or add new entry at root level
+            target[key] = item.value();
+            std::cout << _INFO_CONSOLE_TEXT << "Updated/Added JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        }
+    }
+}
+
 void CConfigFile::updateJSON(const std::string& jsonString)
 {
 #ifndef DE_DISABLE_TRY
@@ -116,44 +169,11 @@ void CConfigFile::updateJSON(const std::string& jsonString)
 #endif
         m_updatePending = true;
         Json_de updateJson = Json_de::parse(removeComments(jsonString));
-        for (const auto& item : updateJson.items()) {
-            std::string key = item.key();
-            
-            // Check if key contains '.' for nested structure (e.g., "follow_me.quad.PID_P_X")
-            if (key.find('.') != std::string::npos) {
-                // Split key by '.' to handle nested structures
-                std::vector<std::string> pathParts;
-                std::stringstream ss(key);
-                std::string part;
-                while (std::getline(ss, part, '.')) {
-                    if (!part.empty()) {
-                        pathParts.push_back(part);
-                    }
-                }
-                
-                if (pathParts.empty()) {
-                    std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Invalid key format: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
-                    continue;
-                }
-                
-                // Navigate/create nested structure
-                Json_de* currentNode = &m_ConfigJSON;
-                for (size_t i = 0; i < pathParts.size() - 1; ++i) {
-                    if (!currentNode->contains(pathParts[i])) {
-                        (*currentNode)[pathParts[i]] = Json_de::object();
-                    }
-                    currentNode = &((*currentNode)[pathParts[i]]);
-                }
-                
-                // Update the value at the nested location using the last part as the key
-                (*currentNode)[pathParts.back()] = item.value();
-                std::cout << _INFO_CONSOLE_TEXT << "Updated/Added nested JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
-            } else {
-                // Update existing entry or add new entry at root level
-                m_ConfigJSON[key] = item.value();
-                std::cout << _INFO_CONSOLE_TEXT << "Updated/Added JSON key: " << key << _NORMAL_CONSOLE_TEXT_ << std::endl;
-            }
-        }
+        // Mirror UI edits into both the runtime config and the pristine base
+        // so saveConfigFile() persists them into the published file without
+        // dragging in any local overrides.
+        applyUpdateJSON(m_ConfigJSON, updateJson);
+        applyUpdateJSON(m_BaseJSON, updateJson);
         saveConfigFile();
 #ifndef DE_DISABLE_TRY
     } catch (const std::exception& e) {
@@ -161,6 +181,38 @@ void CConfigFile::updateJSON(const std::string& jsonString)
         return;
     }
 #endif
+}
+
+// Recursively merge `overrides` on top of `target`. Nested objects are
+// merged key-by-key; non-object values replace the target outright.
+static void deepMerge(Json_de& target, const Json_de& overrides)
+{
+    if (!overrides.is_object()) {
+        target = overrides;
+        return;
+    }
+    if (!target.is_object()) {
+        target = Json_de::object();
+    }
+    for (const auto& item : overrides.items()) {
+        const std::string& key = item.key();
+        if (target.contains(key) && target[key].is_object() && item.value().is_object()) {
+            deepMerge(target[key], item.value());
+        } else {
+            target[key] = item.value();
+        }
+    }
+}
+
+void CConfigFile::applyLocalOverrides(const Json_de& localJson)
+{
+    m_LocalOverrides = localJson;
+    if (localJson.is_null() || localJson.empty()) return;
+    // Reset runtime to the pristine base, then layer overrides on top so
+    // calling this repeatedly (e.g. after reloadFile) does not stack.
+    m_ConfigJSON = m_BaseJSON;
+    deepMerge(m_ConfigJSON, localJson);
+    std::cout << _INFO_CONSOLE_TEXT << "Applied local config overrides (" << localJson.size() << " top-level key(s))." << _NORMAL_CONSOLE_TEXT_ << std::endl;
 }
 
 void CConfigFile::saveConfigFile()
@@ -190,7 +242,9 @@ void CConfigFile::saveConfigFile()
         std::cerr << _ERROR_CONSOLE_BOLD_TEXT_ << "Error: Could not open config file for writing: " << m_file_url << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return;
     }
-    outFile << m_ConfigJSON.dump(4);
+    // Persist the pristine base (no local overrides) so the published
+    // config file stays clean and shareable.
+    outFile << m_BaseJSON.dump(4);
     outFile.close();
     std::cout << _SUCCESS_CONSOLE_TEXT_ << "Config file saved successfully: " << m_file_url << _NORMAL_CONSOLE_TEXT_ << std::endl;
 
