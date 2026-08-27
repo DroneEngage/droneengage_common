@@ -376,11 +376,9 @@
 
 #define TYPE_AndruavMessage_MAVLINK_EVENTS                     6527
 
-<<<<<<< HEAD
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_ACTION              6528
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_STATUS              6529
 #define TYPE_AndruavMessage_SOUND_LIST                         6530
-=======
 /**
  * @brief Remote Telnet/Terminal messages.
  * @details Allows a webclient to open a remote shell session on a unit,
@@ -409,11 +407,10 @@
  * after the JSON header (see CModule::sendBMSG). The "i" field in the
  * JSON header identifies the target session.
  */
-#define TYPE_AndruavMessage_TELNET_ACTION                      6528
-#define TYPE_AndruavMessage_TELNET_STATUS                      6529
-#define TYPE_AndruavMessage_TELNET_DATA                        6530
-#define TYPE_AndruavMessage_TELNET_REMOTE_EXECUTE              6531
->>>>>>> 2ee7592 (Add TELNET message types and MODULE_CLASS_TELNET)
+#define TYPE_AndruavMessage_TELNET_ACTION                      6531
+#define TYPE_AndruavMessage_TELNET_STATUS                      6532
+#define TYPE_AndruavMessage_TELNET_DATA                        6533
+#define TYPE_AndruavMessage_TELNET_REMOTE_EXECUTE              6534
 
 #define TYPE_AndruavMessage_DUMMY                              9999
 
