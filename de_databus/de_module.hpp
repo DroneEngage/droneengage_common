@@ -37,7 +37,11 @@ typedef enum {
 #define MODULE_CLASS_A_RECOGNITION              "ai_rec" 
 #define MODULE_CLASS_TRACKING                   "trk"
 #define MODULE_CLASS_VIEWLINK                   "vlk"
+<<<<<<< HEAD
 #define MODULE_CLASS_IR_MI48_CAMERA             "ir"
+=======
+#define MODULE_CLASS_TELNET                     "tel"
+>>>>>>> 2ee7592 (Add TELNET message types and MODULE_CLASS_TELNET)
 
 
 namespace de

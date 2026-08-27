@@ -376,9 +376,44 @@
 
 #define TYPE_AndruavMessage_MAVLINK_EVENTS                     6527
 
+<<<<<<< HEAD
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_ACTION              6528
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_STATUS              6529
 #define TYPE_AndruavMessage_SOUND_LIST                         6530
+=======
+/**
+ * @brief Remote Telnet/Terminal messages.
+ * @details Allows a webclient to open a remote shell session on a unit,
+ * send keystrokes, and receive terminal output. The de_telnet module
+ * owns the pty lifecycle; de_comm routes these messages like any other
+ * module-class message.
+ *
+ * TELNET_ACTION_OPEN    - open a new session. Reply with TELNET_STATUS.
+ * TELNET_ACTION_CLOSE   - close a session by session_id.
+ * TELNET_ACTION_LIST    - request list of active sessions.
+ * TELNET_ACTION_RESIZE  - resize pty window (cols/rows).
+ * TELNET_ACTION_DATA    - keystrokes/input from client (binary payload).
+ *
+ * JSON fields (in "ms" / ANDRUAV_PROTOCOL_MESSAGE_CMD):
+ *   "a": action code (TELNET_ACTION_*)
+ *   "i": session_id (string, assigned by module on OPEN)
+ *   "d": text data (string) for DATA action when not using binary attach
+ *   "c": columns (int) for RESIZE
+ *   "r": rows    (int) for RESIZE
+ *   "sh": shell  (string, optional) override shell binary for OPEN
+ *   "st": status code (int) for TELNET_STATUS
+ *   "e": error message (string) for TELNET_STATUS on failure
+ *   "l": array of session info objects for LIST reply
+ *
+ * Binary path: TELNET_DATA may carry raw bytes as the binary attachment
+ * after the JSON header (see CModule::sendBMSG). The "i" field in the
+ * JSON header identifies the target session.
+ */
+#define TYPE_AndruavMessage_TELNET_ACTION                      6528
+#define TYPE_AndruavMessage_TELNET_STATUS                      6529
+#define TYPE_AndruavMessage_TELNET_DATA                        6530
+#define TYPE_AndruavMessage_TELNET_REMOTE_EXECUTE              6531
+>>>>>>> 2ee7592 (Add TELNET message types and MODULE_CLASS_TELNET)
 
 #define TYPE_AndruavMessage_DUMMY                              9999
 
@@ -492,12 +527,23 @@
 
 
 // Remote Execute Commands
+#define RemoteCommand_MAKETILT                              100
+#define RemoteCommand_TAKEIMAGE                             102
+#define RemoteCommand_MAKEBEEP                              103 // Toggle siren/alarm sound
+#define RemoteCommand_SENDSMS                               104 // Send SMS with GPS location to unit's configured recovery number
 #define RemoteCommand_ROTATECAM                             105 // Rotate Camera
+#define RemoteCommand_IMUCTRL                               106 // Enable/disable IMU data streaming
+#define RemoteCommand_SMSwGPS                               107 // Send SMS with GPS location; optional "n" field selects receiver number
 #define RemoteCommand_TELEMETRYCTRL                         108 // Telemetry streaming
+#define RemoteCommand_NOTIFICATION                          109
 #define RemoteCommand_STREAMVIDEO 		                  110
 #define RemoteCommand_RECORDVIDEO 		                  111
 #define RemoteCommand_STREAMVIDEORESUME 	                  112
+#define RemoteCommand_ChangeUnitID                          113
 #define RemoteCommand_SWITCHCAM 			           114
+#define RemoteCommand_SET_GPS_SOURCE                        115
+#define RemoteCommand_SET_CONNECT                           116
+#define RemoteCommand_MAKEFLASH                             117 // Toggle flash using LED and Screen
 #define RemoteCommand_CONNECT_FCB                           118
 
 
@@ -661,3 +707,19 @@
 
 #define CONFIG_STATUS_FETCH_CONFIG_TEMPLATE                 0
 #define CONFIG_STATUS_FETCH_CONFIG                          1
+
+
+// TYPE_AndruavMessage_TELNET_ACTION
+#define TELNET_ACTION_OPEN                                  0
+#define TELNET_ACTION_CLOSE                                 1
+#define TELNET_ACTION_LIST                                  2
+#define TELNET_ACTION_RESIZE                                3
+#define TELNET_ACTION_DATA                                  4   // input from client
+
+// TYPE_AndruavMessage_TELNET_STATUS
+#define TELNET_STATUS_OPENED                                0   // session opened ok
+#define TELNET_STATUS_CLOSED                                1   // session closed
+#define TELNET_STATUS_DATA                                  2   // output data from pty
+#define TELNET_STATUS_LIST                                  3   // list of sessions
+#define TELNET_STATUS_ERROR                                 4   // error (see "e" field)
+#define TELNET_STATUS_RESIZED                               5   // resize ack
