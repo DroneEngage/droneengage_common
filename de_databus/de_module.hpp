@@ -38,6 +38,7 @@ typedef enum {
 #define MODULE_CLASS_TRACKING                   "trk"
 #define MODULE_CLASS_VIEWLINK                   "vlk"
 #define MODULE_CLASS_IR_MI48_CAMERA             "ir"
+#define MODULE_CLASS_TELNET                     "tel"
 
 
 namespace de

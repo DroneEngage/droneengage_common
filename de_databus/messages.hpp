@@ -380,6 +380,93 @@
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_STATUS              6529
 #define TYPE_AndruavMessage_SOUND_LIST                         6530
 
+/**
+ * @brief Remote Telnet/Terminal messages.
+ * @details Allows a webclient to open a remote shell session on a unit,
+ * send keystrokes, and receive terminal output. The de_telnet module
+ * owns the pty lifecycle; de_comm routes these messages like any other
+ * module-class message.
+ *
+ * TELNET_ACTION_OPEN    - open a new session. Reply with TELNET_STATUS.
+ * TELNET_ACTION_CLOSE   - close a session by session_id.
+ * TELNET_ACTION_LIST    - request list of active sessions.
+ * TELNET_ACTION_RESIZE  - resize pty window (cols/rows).
+ * TELNET_ACTION_DATA    - keystrokes/input from client (binary payload).
+ *
+ * JSON fields (in "ms" / ANDRUAV_PROTOCOL_MESSAGE_CMD):
+ *   "a": action code (TELNET_ACTION_*)
+ *   "i": session_id (string, assigned by module on OPEN)
+ *   "d": text data (string) for DATA action when not using binary attach
+ *   "c": columns (int) for RESIZE
+ *   "r": rows    (int) for RESIZE
+ *   "sh": shell  (string, optional) override shell binary for OPEN
+ *   "st": status code (int) for TELNET_STATUS
+ *   "e": error message (string) for TELNET_STATUS on failure
+ *   "l": array of session info objects for LIST reply
+ *
+ * Binary path: TELNET_DATA may carry raw bytes as the binary attachment
+ * after the JSON header (see CModule::sendBMSG). The "i" field in the
+ * JSON header identifies the target session.
+ */
+#define TYPE_AndruavMessage_TELNET_ACTION                      6531
+#define TYPE_AndruavMessage_TELNET_STATUS                      6532
+#define TYPE_AndruavMessage_TELNET_DATA                        6533
+#define TYPE_AndruavMessage_TELNET_REMOTE_EXECUTE              6534
+
+/**
+ * @brief Periodic self-reported module health/memory status (Layer 2 of the
+ * DroneEngage Performance Monitor design - see servers/droneengage_performance_monitor
+ * README). Sent by CFacade_Base::sendMemoryStatus(), called periodically from a
+ * module's own main loop. Any C++ module linking de_common gets this "for free".
+ *
+ * fields:
+ * [a]:  MODULE_HEALTH_ACTION_* (currently only MODULE_HEALTH_ACTION_STATUS)
+ * [rs]: current resident memory (RSS) in MB
+ * [pk]: peak resident-adjacent memory (VmPeak) in MB - a high/still-rising VmPeak
+ *       with RSS tracking it indicates memory that is allocated but never released.
+ * [sw]: swapped-out memory (VmSwap) in MB - non-zero/growing indicates memory
+ *       pressure even before RSS itself looks alarming.
+ * [th]: thread count - a leaking thread count is a distinct failure mode from a
+ *       leaking heap and is cheap to include.
+ * [sl]: RSS growth rate in MB/hour (linear regression over the rolling window)
+ * [tr]: MODULE_HEALTH_TREND_* - UP/DOWN/STABLE, derived from [sl]
+ * [hs]: MODULE_HEALTH_STATUS_* - OK/WARNING/CRITICAL, derived from [rs]/[sl]
+ *       against configurable thresholds (CFacade_Base::configureMemoryStatus())
+ * [up]: seconds since this module's health monitor started sampling - lets the
+ *       receiver discount slope/trend during the warm-up period after a (re)start.
+ *
+ * Module identity (module_id/module_key/party_id) is not repeated here - it is
+ * already carried by the surrounding sendJMSG() envelope.
+ */
+#define TYPE_AndruavMessage_MODULE_HEALTH_STATUS                6535
+
+#define MODULE_HEALTH_ACTION_STATUS                             0
+
+// MODULE_HEALTH_STATUS_* : field [hs]
+#define MODULE_HEALTH_STATUS_OK                                 0
+#define MODULE_HEALTH_STATUS_WARNING                            1
+#define MODULE_HEALTH_STATUS_CRITICAL                           2
+
+// MODULE_HEALTH_TREND_* : field [tr]
+#define MODULE_HEALTH_TREND_STABLE                              0
+#define MODULE_HEALTH_TREND_UP                                  1
+#define MODULE_HEALTH_TREND_DOWN                                2
+
+// TYPE_AndruavMessage_TELNET_ACTION
+#define TELNET_ACTION_OPEN                                  0
+#define TELNET_ACTION_CLOSE                                 1
+#define TELNET_ACTION_LIST                                  2
+#define TELNET_ACTION_RESIZE                                3
+#define TELNET_ACTION_DATA                                  4   // input from client
+
+// TYPE_AndruavMessage_TELNET_STATUS
+#define TELNET_STATUS_OPENED                                0   // session opened ok
+#define TELNET_STATUS_CLOSED                                1   // session closed
+#define TELNET_STATUS_DATA                                  2   // output data from pty
+#define TELNET_STATUS_LIST                                  3   // list of sessions
+#define TELNET_STATUS_ERROR                                 4   // error (see "e" field)
+#define TELNET_STATUS_RESIZED                               5   // resize ack
+
 #define TYPE_AndruavMessage_DUMMY                              9999
 
 

@@ -1,7 +1,9 @@
+#include <iostream>
 #include <string>
 
 #include "../helpers/colors.hpp"
 #include "de_facade_base.hpp"
+#include "de_module_health.hpp"
 
 
 
@@ -50,6 +52,40 @@ void CFacade_Base::sendErrorMessage (const std::string&target_party_id, const in
     
     std::cout << std::endl << _SUCCESS_CONSOLE_BOLD_TEXT_ << " -- sendErrorMessage " << _NORMAL_CONSOLE_TEXT_ << description << std::endl;
     
+    return ;
+}
+
+
+void CFacade_Base::configureMemoryStatus(const double max_rss_mb, const double max_growth_mb_per_hour) const
+{
+    CModuleHealthMonitor::getInstance().configure(max_rss_mb, max_growth_mb_per_hour);
+}
+
+
+void CFacade_Base::sendMemoryStatus(const std::string& target_party_id) const
+{
+    const MODULE_HEALTH_SAMPLE& health = CModuleHealthMonitor::getInstance().sample();
+    if (!health.valid) return; // /proc/self/status unavailable
+
+    Json_de message =
+        {
+            {"a",  MODULE_HEALTH_ACTION_STATUS},
+            {"rs", health.rss_mb},
+            {"pk", health.vmpeak_mb},
+            {"sw", health.vmswap_mb},
+            {"th", health.threads},
+            {"sl", health.slope_mb_h},
+            {"tr", health.trend},
+            {"hs", health.status},
+            {"up", health.uptime_sec}
+        };
+
+    m_module.sendJMSG (target_party_id, message, TYPE_AndruavMessage_MODULE_HEALTH_STATUS, false);
+
+    #ifdef DDEBUG
+        std::cout << "sendMemoryStatus:" << message.dump() << std::endl;
+    #endif
+
     return ;
 }
 
