@@ -1,5 +1,8 @@
+#include <chrono>
+
 #include "../helpers/colors.hpp"
 #include "de_module.hpp"
+#include "de_facade_base.hpp"
 
 
 
@@ -66,12 +69,18 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
         cUDPClient.start();
     }
 
+    m_health_thread_exit = false;
+    m_health_thread = std::thread(&CModule::healthHeartbeatLoop, this);
+
     return true;
 }
 
 
 bool de::comm::CModule::uninit ()
 {
+    m_health_thread_exit = true;
+    if (m_health_thread.joinable()) m_health_thread.join();
+
     if (m_use_unix_socket) {
         cUnixDgramClient.stop();
     } else {
@@ -79,6 +88,31 @@ bool de::comm::CModule::uninit ()
     }
 
     return true;
+}
+
+
+/**
+ * @brief Schedules this module's self-reported memory health every
+ * MODULE_HEALTH_INTERVAL_SEC. Runs for the lifetime of the module (started
+ * by init(), stopped by uninit()). CModule only owns the timing; the actual
+ * message content is CFacade_Base::sendMemoryStatus()'s responsibility, same
+ * as every other message type (CModule stays a dumb transport).
+ */
+void de::comm::CModule::healthHeartbeatLoop ()
+{
+    static const int MODULE_HEALTH_INTERVAL_SEC = 30;
+
+    int tick = 0;
+    while (!m_health_thread_exit.load())
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        if (++tick >= MODULE_HEALTH_INTERVAL_SEC)
+        {
+            tick = 0;
+            CFacade_Base::getInstance().sendMemoryStatus("");
+        }
+    }
 }
 
 

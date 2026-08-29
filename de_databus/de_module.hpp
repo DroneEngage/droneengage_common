@@ -4,6 +4,8 @@
 
 #include <ctime>
 #include <iostream>
+#include <thread>
+#include <atomic>
 
 #include "../helpers/json_nlohmann.hpp"
 #include "udpClient.hpp"
@@ -268,8 +270,21 @@ namespace comm
             Json_de m_message_filter;
 
             void (*m_OnReceive)(const char *, int len, Json_de jMsg) = nullptr;
-            
+
             std::mutex m_lock;
+
+        private:
+
+            /**
+             * @brief Background thread started by init() / stopped by uninit() that
+             * calls sendMemoryStatus() every MODULE_HEALTH_INTERVAL_SEC. Centralized
+             * here so every module gets self-reported memory health for free, instead
+             * of each module's main.cpp having to remember to schedule it.
+             */
+            void healthHeartbeatLoop ();
+
+            std::thread       m_health_thread;
+            std::atomic<bool> m_health_thread_exit {false};
     };
 };
 };

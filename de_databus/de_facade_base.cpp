@@ -70,6 +70,7 @@ void CFacade_Base::sendMemoryStatus(const std::string& target_party_id) const
     Json_de message =
         {
             {"a",  MODULE_HEALTH_ACTION_STATUS},
+            {"k",  m_module.getModuleKey()},
             {"rs", health.rss_mb},
             {"pk", health.vmpeak_mb},
             {"sw", health.vmswap_mb},

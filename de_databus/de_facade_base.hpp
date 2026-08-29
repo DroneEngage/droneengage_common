@@ -30,17 +30,19 @@ namespace de
 
             /**
              * @brief Configure this module's memory ceiling/growth thresholds used by
-             * sendMemoryStatus(). Call once at startup; defaults are 500MB / 20MB/h if
-             * not called. See CModuleHealthMonitor::configure().
+             * sendMemoryStatus(). Defaults are 500MB / 20MB/h if not called. See
+             * CModuleHealthMonitor::configure().
              */
             void configureMemoryStatus(const double max_rss_mb, const double max_growth_mb_per_hour) const;
 
             /**
              * @brief Samples this process's own memory (RSS/VmPeak/VmSwap/threads),
              * derives a growth trend + health status, and sends it as
-             * TYPE_AndruavMessage_MODULE_HEALTH_STATUS. Call periodically (e.g. every
-             * 30s) from the module's main loop. No-op if /proc/self/status is
-             * unavailable (e.g. non-Linux host).
+             * TYPE_AndruavMessage_MODULE_HEALTH_STATUS. CModule::init() already calls
+             * this automatically every 30s via CFacade_Base::getInstance(), so modules
+             * normally never need to call this directly - it remains available for an
+             * on-demand report. No-op if /proc/self/status is unavailable (e.g.
+             * non-Linux host).
              */
             void sendMemoryStatus(const std::string &target_party_id) const;
 
