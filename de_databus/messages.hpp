@@ -149,7 +149,7 @@
 #define TYPE_AndruavModule_ID                   9100
 /**
  * @brief Generic "call this action on another module" RPC envelope.
- * @direction MODULE_TO_MODULE - internal RPC; sub-command carried in nested "C" field (often reuses a TYPE_AndruavMessage_*/RemoteCommand_* id as the verb)
+ * @direction MODULE_TO_MODULE - internal RPC; sub-command carried in nested "C" field (often reuses a TYPE_AndruavMessage_* or RemoteCommand_* id as the verb)
  * @rate ON_DEMAND
  * @discard NO - it is an RPC call, dropping it silently loses the request
  * fields: C int REQUIRED - sub-command/action id
