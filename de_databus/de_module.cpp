@@ -1,6 +1,7 @@
 #include <chrono>
 
 #include "../helpers/colors.hpp"
+#include "../helpers/helpers.hpp"
 #include "de_module.hpp"
 #include "de_facade_base.hpp"
 
@@ -49,9 +50,12 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
     m_use_unix_socket = use_unix_socket && isLocalhost(targetIP);
     
     if (m_use_unix_socket) {
-        // Unix domain socket for localhost communication
-        std::string brokerSocketPath = "/run/de_comm/de_comm_broker.sock";
-        std::string ownSocketPath = "/run/de_comm/de_comm_" + m_module_id + "_" + m_module_key + ".sock";
+        // Unix domain socket for localhost communication.
+        // Base dir is resolved at runtime: /run/de_comm (root, secure) or
+        // /tmp/de_comm (non-root fallback). See helpers::getUnixSocketBaseDir().
+        std::string baseDir = getUnixSocketBaseDir();
+        std::string brokerSocketPath = baseDir + "/de_comm_broker.sock";
+        std::string ownSocketPath = baseDir + "/de_comm_" + m_module_id + "_" + m_module_key + ".sock";
         
 #ifdef DEBUG
         std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using Unix socket. broker:" << brokerSocketPath << " own:" << ownSocketPath << _NORMAL_CONSOLE_TEXT_ << std::endl;
