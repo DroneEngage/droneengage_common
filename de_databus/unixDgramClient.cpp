@@ -5,9 +5,11 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <chrono>
 #include <map>
+#include <string>
 
 namespace de {
 namespace comm {
@@ -46,6 +48,45 @@ void CUnixDgramClient::init(const char* brokerSocketPath, const char* ownSocketP
     memset(m_BrokerAddress, 0, sizeof(struct sockaddr_un));
     m_BrokerAddress->sun_family = AF_UNIX;
     strncpy(m_BrokerAddress->sun_path, brokerSocketPath, sizeof(m_BrokerAddress->sun_path) - 1);
+    
+    // Ensure the parent directory of the own socket path exists (mkdir -p).
+    // bind() on AF_UNIX requires the containing directory to already exist;
+    // it will not create it. This lets modules run without a pre-created
+    // /run/de_comm, even if they start before de_comm has created the dir.
+    //
+    // Multi-module / multi-instance safety:
+    //  - The parent dir (/run/de_comm) is SHARED by all modules and the broker.
+    //    Concurrent mkdir() is race-safe: the first caller creates it, the rest
+    //    get EEXIST which we silently ignore (standard mkdir -p semantics).
+    //  - The socket FILE is unique per module instance:
+    //      /run/de_comm/de_comm_<module_id>_<module_key>.sock
+    //    (see de_module.cpp). Each module only unlinks+binds its OWN file, so
+    //    multiple modules of the same type (or different types) can run
+    //    simultaneously without colliding. This block never touches the socket
+    //    file itself — only the parent directory tree.
+    {
+        std::string path(ownSocketPath);
+        std::size_t pos = path.find_last_of('/');
+        if (pos != std::string::npos && pos > 0) {
+            std::string parent = path.substr(0, pos);
+            std::size_t start = 0;
+            while (true) {
+                std::size_t next = parent.find('/', start + 1);
+                std::string sub = (next == std::string::npos) ? parent : parent.substr(0, next);
+                if (!sub.empty()) {
+                    if (mkdir(sub.c_str(), 0775) == 0) {
+#ifdef DEBUG_UNIX
+                        std::cout << _INFO_CONSOLE_TEXT << "CUnixDgramClient::init - created dir: " << sub << _NORMAL_CONSOLE_TEXT_ << std::endl;
+#endif
+                    } else if (errno != EEXIST) {
+                        std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Failed to create socket dir '" << sub << "': " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                    }
+                }
+                if (next == std::string::npos) break;
+                start = next;
+            }
+        }
+    }
     
     // Remove stale socket file if exists
     unlink(ownSocketPath);
