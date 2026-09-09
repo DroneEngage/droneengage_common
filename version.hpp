@@ -3,7 +3,7 @@
 
 
 // BASE DE_COMM_VERSION
-#define DE_COMM_VERSION_STRING     "10.5.1"
+#define DE_COMM_VERSION_STRING     "10.5.2"
 
 
 #endif
