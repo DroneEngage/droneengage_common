@@ -28,6 +28,7 @@ typedef enum {
 #define MODULE_FEATURE_AI_RECOGNITION           "A"
 #define MODULE_FEATURE_TRACKING                 "K"
 #define MODULE_FEATURE_P2P                      "P" 
+#define MODULE_FEATURE_PRECISION_LANDING        "L"
 
 
 #define MODULE_CLASS_COMM                       "comm"
@@ -41,6 +42,7 @@ typedef enum {
 #define MODULE_CLASS_VIEWLINK                   "vlk"
 #define MODULE_CLASS_IR_MI48_CAMERA             "ir"
 #define MODULE_CLASS_TELNET                     "tel"
+#define MODULE_CLASS_PRECISION_LANDING          "pl"
 
 
 namespace de

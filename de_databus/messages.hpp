@@ -881,7 +881,11 @@
  * between each other.
  * This allows custom implementation for sharing mavlink info
  * between mavlink module and other modules.
- * @direction DEAD/UNUSED - defined but no construction or parsing found anywhere in this codebase
+ * @direction DEAD/UNUSED - defined but no construction or parsing found anywhere in this codebase.
+ *  Deliberately not revived by the precision-landing work: de_precland uses the
+ *  semantic TYPE_AndruavMessage_PRECLAND_TARGET (6537) instead, which supersedes
+ *  this use case. If a generic raw-MAVLink bridge is wanted later it needs its
+ *  own msgid whitelist in de_mavlink, not this ID.
 */
 #define TYPE_AndruavMessage_INTERNAL_MAVLINK                   6504
 
@@ -1289,8 +1293,11 @@
  * fields:
  * [a]:  MODULE_HEALTH_ACTION_* (currently only MODULE_HEALTH_ACTION_STATUS)
  * [rs]: current resident memory (RSS) in MB
- * [pk]: peak resident-adjacent memory (VmPeak) in MB - a high/still-rising VmPeak
- *       with RSS tracking it indicates memory that is allocated but never released.
+ * [pk]: peak resident memory (RSS) over the rolling history window in MB -
+ *       NOT the kernel's lifetime VmPeak. This ages out the one-off startup
+ *       allocation spike as the window rolls, so a high [pk] next to a low/stable
+ *       [rs] no longer falsely suggests a leak. A [pk] that keeps climbing in
+ *       step with [rs] across windows still indicates unreleased memory.
  * [sw]: swapped-out memory (VmSwap) in MB - non-zero/growing indicates memory
  *       pressure even before RSS itself looks alarming.
  * [th]: thread count - a leaking thread count is a distinct failure mode from a
@@ -1320,6 +1327,49 @@
  *  "Roadmap (future)" even though it's implemented and used by at least 2 modules.
  */
 #define TYPE_AndruavMessage_MODULE_HEALTH_STATUS                6535
+
+/**
+ * @brief GCS or de_mavlink commands to the precision-landing module
+ * (de_precland): disable/enable, select target_num from the layout file,
+ * or run selftest.
+ * @direction WEB_TO_MODULE and MODULE_TO_MODULE - mapped to
+ *  PERMISSION_ALLOW_TRACKING in de_comm (a vision-control action)
+ * @rate ON_DEMAND
+ * @discard NO - a discrete control action
+ * fields: a int REQUIRED (PRECLAND_ACTION_* code); b int OPTIONAL
+ *  (target_num for PRECLAND_ACTION_SET_TARGET)
+ */
+#define TYPE_AndruavMessage_PRECLAND_ACTION                     6536
+/**
+ * @brief Fused multi-tag precision-landing pose in body frame (FRD), metres.
+ *  de_precland detects an AprilTag (tag36h11) multi-size target board, solves
+ *  a single metric pose over all visible tags and publishes this; de_mavlink
+ *  converts it into MAVLink LANDING_TARGET behind a safety gate.
+ * @direction MODULE_TO_MODULE - intermodule only, de_precland -> de_mavlink;
+ *  never forwarded to the WebClient
+ * @rate HIGH - configurable, default 10Hz
+ * @discard YES - latest pose supersedes older ones
+ * fields: x/y/z double REQUIRED (body-frame forward/right/down metres);
+ *  ax/ay double REQUIRED (LOS angles rad); n int REQUIRED (tags fused);
+ *  e double REQUIRED (reprojection RMSE px); t int64 REQUIRED (capture
+ *  timestamp usec monotonic, taken at frame grab NOT send time);
+ *  v bool REQUIRED (position_valid); tn int OPTIONAL (target_num)
+ */
+#define TYPE_AndruavMessage_PRECLAND_TARGET                     6537
+/**
+ * @brief Precision-landing state (searching/locked/degraded/error) plus
+ *  diagnostic counters for the GCS status widget.
+ * @direction MODULE_TO_WEB and MODULE_TO_MODULE (de_precland -> GCS +
+ *  de_mavlink); intentionally NOT permission-mapped in de_comm so view-mode
+ *  GCS accounts can observe it
+ * @rate LOW - ~2Hz plus immediately on every state change
+ * @discard YES - latest status supersedes older ones
+ * fields: a int REQUIRED (PRECLAND_STATUS_* state); b double (fps);
+ *  c double (last reprojection RMSE px); d double (slant range m);
+ *  e array<int> (tag IDs currently used); f string (last error / gate
+ *  reason, empty when nominal)
+ */
+#define TYPE_AndruavMessage_PRECLAND_STATUS                     6538
 
 #define MODULE_HEALTH_ACTION_STATUS                             0
 
@@ -1707,6 +1757,19 @@
 #define TrackingTarget_STATUS_AI_Recognition_DISABLED       3
 #define TrackingTarget_STATUS_AI_Recognition_CLASS_LIST     4
 
+
+// TYPE_AndruavMessage_PRECLAND_ACTION
+#define PRECLAND_ACTION_DISABLE                             0
+#define PRECLAND_ACTION_ENABLE                              1
+#define PRECLAND_ACTION_SET_TARGET                          2   // uses field b (target_num)
+#define PRECLAND_ACTION_SELFTEST                            3   // validate camera.yaml + layout, report via STATUS
+
+// TYPE_AndruavMessage_PRECLAND_STATUS
+#define PRECLAND_STATUS_DISABLED                            0
+#define PRECLAND_STATUS_SEARCHING                           1
+#define PRECLAND_STATUS_LOCKED                              2
+#define PRECLAND_STATUS_DEGRADED                            3   // detecting, but gated (RMSE/stale)
+#define PRECLAND_STATUS_ERROR                               4   // no camera / no camera.yaml / bad layout
 
 // TYPE_AndruavMessage_CONFIG_ACTION
 #define CONFIG_ACTION_Restart                               0

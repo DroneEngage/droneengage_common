@@ -72,7 +72,7 @@ void CFacade_Base::sendMemoryStatus(const std::string& target_party_id) const
             {"a",  MODULE_HEALTH_ACTION_STATUS},
             {"k",  m_module.getModuleKey()},
             {"rs", health.rss_mb},
-            {"pk", health.vmpeak_mb},
+            {"pk", health.peak_rss_mb},
             {"sw", health.vmswap_mb},
             {"th", health.threads},
             {"sl", health.slope_mb_h},
