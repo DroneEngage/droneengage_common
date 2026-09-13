@@ -1182,6 +1182,38 @@
  *  (true when replying to a request)
  */
 #define TYPE_AndruavMessage_SOUND_LIST                         6530
+/**
+ * @brief Remote Telnet/Terminal messages.
+ * @details Allows a webclient to open a remote shell session on a unit,
+ * send keystrokes, and receive terminal output. The de_telnet module
+ * owns the pty lifecycle; de_comm routes these messages like any other
+ * module-class message.
+ *
+ * TELNET_ACTION_OPEN    - open a new session. Reply with TELNET_STATUS.
+ * TELNET_ACTION_CLOSE   - close a session by session_id.
+ * TELNET_ACTION_LIST    - request list of active sessions.
+ * TELNET_ACTION_RESIZE  - resize pty window (cols/rows).
+ * TELNET_ACTION_DATA    - keystrokes/input from client (binary payload).
+ *
+ * JSON fields (in "ms" / ANDRUAV_PROTOCOL_MESSAGE_CMD):
+ *   "a": action code (TELNET_ACTION_*)
+ *   "i": session_id (string, assigned by module on OPEN)
+ *   "d": text data (string) for DATA action when not using binary attach
+ *   "c": columns (int) for RESIZE
+ *   "r": rows    (int) for RESIZE
+ *   "sh": shell  (string, optional) override shell binary for OPEN
+ *   "st": status code (int) for TELNET_STATUS
+ *   "e": error message (string) for TELNET_STATUS on failure
+ *   "l": array of session info objects for LIST reply
+ *
+ * Binary path: TELNET_DATA may carry raw bytes as the binary attachment
+ * after the JSON header (see CModule::sendBMSG). The "i" field in the
+ * JSON header identifies the target session.
+ */
+#define TYPE_AndruavMessage_TELNET_ACTION                      6531
+#define TYPE_AndruavMessage_TELNET_STATUS                      6532
+#define TYPE_AndruavMessage_TELNET_DATA                        6533
+#define TYPE_AndruavMessage_TELNET_REMOTE_EXECUTE              6534
 
 /**
  * @brief Remote Telnet/Terminal messages.
@@ -1507,12 +1539,23 @@
 
 // Remote Execute Commands
 // @direction WEB_TO_MODULE (camera module, via RemoteExecute), @rate ON_DEMAND unless noted.
+#define RemoteCommand_MAKETILT                              100
+#define RemoteCommand_TAKEIMAGE                             102
+#define RemoteCommand_MAKEBEEP                              103 // Toggle siren/alarm sound
+#define RemoteCommand_SENDSMS                               104 // Send SMS with GPS location to unit's configured recovery number
 #define RemoteCommand_ROTATECAM                             105 // Rotate Camera; a: string REQUIRED (channel, ""=first available), r: int REQUIRED (rotation angle)
+#define RemoteCommand_IMUCTRL                               106 // Enable/disable IMU data streaming
+#define RemoteCommand_SMSwGPS                               107 // Send SMS with GPS location; optional "n" field selects receiver number
 #define RemoteCommand_TELEMETRYCTRL                         108 // Telemetry streaming; Act: unsigned REQUIRED (ADJUST_RATE/REQUEST_PAUSE/REQUEST_RESUME), LVL: unsigned OPTIONAL (with ADJUST_RATE only); permission-gated: PERMISSION_ALLOW_GCS_FULL_CONTROL
+#define RemoteCommand_NOTIFICATION                          109
 #define RemoteCommand_STREAMVIDEO 		                  110 // DEAD-ish: handler only replies with CameraList, Act/CH/N fields sent by web are not consumed
 #define RemoteCommand_RECORDVIDEO 		                  111 // T: string REQUIRED (track/channel), Act: bool REQUIRED (start/stop)
 #define RemoteCommand_STREAMVIDEORESUME 	                  112 // DEAD - defined only, no sender or receiver found anywhere
+#define RemoteCommand_ChangeUnitID                          113
 #define RemoteCommand_SWITCHCAM 			           114 // DEAD in practice - module handler is a no-op stub (just replies CameraList), no active web sender (camera switch UI uses CameraSwitch(1050) instead, which is itself dead - see above)
+#define RemoteCommand_SET_GPS_SOURCE                        115
+#define RemoteCommand_SET_CONNECT                           116
+#define RemoteCommand_MAKEFLASH                             117 // Toggle flash using LED and Screen
 #define RemoteCommand_CONNECT_FCB                           118 // no-op on the receiving side (case exists, body is just `break;`)
 
 
