@@ -1771,6 +1771,17 @@
 #define PRECLAND_STATUS_DEGRADED                            3   // detecting, but gated (RMSE/stale)
 #define PRECLAND_STATUS_ERROR                               4   // no camera / no camera.yaml / bad layout
 
+// PRECLAND_REASON_* : module-internal gate reason codes used by de_precland's
+// publish gate (precland_gate.hpp). Not sent on the wire; the GCS only sees the
+// resulting PRECLAND_STATUS_* state. preclandReasonName() maps these to text
+// for local logs and the debug overlay.
+#define PRECLAND_REASON_NOMINAL                             0
+#define PRECLAND_REASON_NO_TARGET                           1
+#define PRECLAND_REASON_STALE                               2
+#define PRECLAND_REASON_MIN_TAGS                            3
+#define PRECLAND_REASON_RMSE                                4
+#define PRECLAND_REASON_ERROR                               5
+
 // TYPE_AndruavMessage_CONFIG_ACTION
 #define CONFIG_ACTION_Restart                               0
 #define CONFIG_ACTION_APPLY_CONFIG                          1
