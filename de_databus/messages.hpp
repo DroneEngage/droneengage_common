@@ -1331,13 +1331,15 @@
 /**
  * @brief GCS or de_mavlink commands to the precision-landing module
  * (de_precland): disable/enable, select target_num from the layout file,
- * or run selftest.
+ * run selftest, or run chessboard camera calibration.
  * @direction WEB_TO_MODULE and MODULE_TO_MODULE - mapped to
  *  PERMISSION_ALLOW_TRACKING in de_comm (a vision-control action)
  * @rate ON_DEMAND
  * @discard NO - a discrete control action
- * fields: a int REQUIRED (PRECLAND_ACTION_* code); b int OPTIONAL
- *  (target_num for PRECLAND_ACTION_SET_TARGET)
+ * fields: a int REQUIRED (PRECLAND_ACTION_* code);
+ *  b int OPTIONAL (target_num for PRECLAND_ACTION_SET_TARGET);
+ *  b-g int/double OPTIONAL (chessboard params for PRECLAND_ACTION_CALIBRATE:
+ *   b=cols, c=rows, d=square_size_m, e=views, f=width, g=height)
  */
 #define TYPE_AndruavMessage_PRECLAND_ACTION                     6536
 /**
@@ -1366,8 +1368,13 @@
  * @discard YES - latest status supersedes older ones
  * fields: a int REQUIRED (PRECLAND_STATUS_* state); b double (fps);
  *  c double (last reprojection RMSE px); d double (slant range m);
- *  e array<int> (tag IDs currently used); f string (last error / gate
- *  reason, empty when nominal)
+ *  e array<int> (tag IDs currently used); f int (PRECLAND_REASON_* gate
+ *  reason code, NOMINAL when ok);
+ *  g int OPTIONAL (PRECLAND_CALIB_STATUS_* calibration status, absent when
+ *  no calibration is running);
+ *  h int OPTIONAL (calibration views captured so far);
+ *  i int OPTIONAL (calibration views total target);
+ *  j double OPTIONAL (calibration RMS px, present on completion)
  */
 #define TYPE_AndruavMessage_PRECLAND_STATUS                     6538
 
