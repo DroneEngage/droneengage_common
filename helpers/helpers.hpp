@@ -13,11 +13,41 @@
 #include "json_nlohmann.hpp"
 using Json_de = nlohmann::json;
 
+
+#define SEC_M500   500000l
+#define SEC_1     1000000l
+#define SEC_2     2000000l
+#define SEC_3     3000000l
+#define SEC_4     4000000l
+#define SEC_5     5000000l
+#define SEC_6     6000000l
+#define SEC_7     7000000l
+#define SEC_8     8000000l
+#define SEC_9     9000000l
+#define SEC_10   10000000l
+#define SEC_15   15000000l
+#define SEC_20   20000000l
+#define SEC_30   30000000l
+
+
+uint64_t convertMACToInteger(const std::string& mac);
+std::string formatMacAddress(const std::vector<uint8_t>& mac_address_bytes, const bool add_colon);
+std::string removeColons(const std::string& input);
+std::vector<uint8_t> convertMacToBytes(const std::string& macAddress);
+
 std::string get_time_string();
 
 uint64_t get_time_usec();
 
 uint64_t get_time_usec_monotonic();
+
+void time_register(uint64_t& time_box);
+
+bool time_passed_usec(const uint64_t& time_box, const uint64_t diff_usec);
+
+bool time_less_usec(const uint64_t& time_box, const uint64_t diff_usec);
+
+bool time_passed_register_usec(uint64_t& time_box, const uint64_t diff_usec);
 
 int wait_time_nsec (const time_t& seconds, const long& nano_seconds);
 

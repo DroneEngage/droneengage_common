@@ -7,8 +7,67 @@
 #include <unistd.h>
 #include <vector>
 #include <sstream>
+#include <regex>
+#include <iomanip>
 
 #include "helpers.hpp"
+
+
+uint64_t convertMACToInteger(const std::string& mac) {
+    uint64_t mac_num = 0;
+    for (int i = 0; i < 5; i++) {
+        std::string octet = mac.substr(i * 3, 2);
+        mac_num = (mac_num << 8) | std::stoul(octet, nullptr, 16);
+    }
+    return mac_num;
+}
+
+/**
+ * @brief create max address with or without :
+ * 
+ * @param mac_address_bytes 
+ * @param add_colon
+ * @return std::string 
+ */
+std::string formatMacAddress(const std::vector<uint8_t>& mac_address_bytes, const bool add_colon) {
+    std::stringstream bssid;
+
+    bssid << std::setw(2) << std::setfill('0') << std::hex; 
+    for (int i = 0; i < mac_address_bytes.size(); i++) {
+        if (add_colon && (i > 0)) {
+            bssid << ":";
+        }
+        bssid << static_cast<int>(mac_address_bytes[i]);
+    }
+    #ifdef DDEBUG
+        std::cout << "MACID:" << bssid.str() << std::endl;
+    #endif
+    return bssid.str();
+}
+
+std::string removeColons(const std::string& input) {
+    std::string result;
+    for (char c : input) {
+        if (c != ':') {
+            result += c;
+        }
+    }
+    return result;
+}
+
+
+std::vector<uint8_t> convertMacToBytes(const std::string& macAddress) {
+    std::regex mac_regex("([a-fA-F0-9]{2}):([a-fA-F0-9]{2}):([a-fA-F0-9]{2}):([a-fA-F0-9]{2}):([a-fA-F0-9]{2}):([a-fA-F0-9]{2})");
+    std::smatch match;
+    std::vector<uint8_t> binaryBytes;
+
+    if (std::regex_match(macAddress, match, mac_regex)) {
+        std::transform(match.begin() + 1, match.end(), std::back_inserter(binaryBytes),
+            [](const std::string& hex) { return static_cast<uint8_t>(std::stoi(hex, nullptr, 16)); });
+    }
+
+    return binaryBytes;
+}
 
 
 std::string get_time_string()
@@ -44,6 +103,36 @@ uint64_t get_time_usec_monotonic()
 	clock_gettime(CLOCK_MONOTONIC, &_time_stamp);
 	return _time_stamp.tv_sec*1000000 + _time_stamp.tv_nsec/1000;
 }
+
+
+void time_register(uint64_t& time_box)
+{
+	time_box =  get_time_usec();
+}
+
+
+bool time_passed_usec(const uint64_t& time_box, const uint64_t diff_usec)
+{
+	const u_int64_t now =  get_time_usec();
+    return ((now - time_box) >= diff_usec);
+}
+
+bool time_less_usec(const uint64_t& time_box, const uint64_t diff_usec)
+{
+	const u_int64_t now =  get_time_usec();
+    return ((now - time_box) <= diff_usec);
+}
+
+
+bool time_passed_register_usec(uint64_t& time_box, const uint64_t diff_usec)
+{
+	const u_int64_t now =  get_time_usec();
+    const bool passed = ((now - time_box) >= diff_usec);
+    if (passed) time_box = now;
+
+    return passed;
+}
+
 
 int wait_time_nsec (const time_t& seconds, const long& nano_seconds)
 {
