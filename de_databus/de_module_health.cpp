@@ -97,7 +97,7 @@ MODULE_HEALTH_SAMPLE CModuleHealthMonitor::sample()
 {
     MODULE_HEALTH_SAMPLE result;
 
-    const uint64_t now = get_time_usec();
+    const uint64_t now = get_time_usec_monotonic();
     if (m_start_time_usec == 0) m_start_time_usec = now;
 
     double rss_mb = 0, vmpeak_mb = 0, vmswap_mb = 0;

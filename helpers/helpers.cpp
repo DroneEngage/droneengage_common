@@ -107,26 +107,26 @@ uint64_t get_time_usec_monotonic()
 
 void time_register(uint64_t& time_box)
 {
-	time_box =  get_time_usec();
+	time_box =  get_time_usec_monotonic();
 }
 
 
 bool time_passed_usec(const uint64_t& time_box, const uint64_t diff_usec)
 {
-	const u_int64_t now =  get_time_usec();
+	const u_int64_t now =  get_time_usec_monotonic();
     return ((now - time_box) >= diff_usec);
 }
 
 bool time_less_usec(const uint64_t& time_box, const uint64_t diff_usec)
 {
-	const u_int64_t now =  get_time_usec();
+	const u_int64_t now =  get_time_usec_monotonic();
     return ((now - time_box) <= diff_usec);
 }
 
 
 bool time_passed_register_usec(uint64_t& time_box, const uint64_t diff_usec)
 {
-	const u_int64_t now =  get_time_usec();
+	const u_int64_t now =  get_time_usec_monotonic();
     const bool passed = ((now - time_box) >= diff_usec);
     if (passed) time_box = now;
 
