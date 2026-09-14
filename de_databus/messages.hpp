@@ -827,6 +827,22 @@
  *  messages.hpp/.py copies, and the webclient's js_andruavMessages.js.
  */
 #define TYPE_AndruavMessage_Viewlink_Telemetry                 1083
+/**
+ * @brief Generic result/ack reply for a TYPE_AndruavMessage_RemoteExecute
+ * (1005) command that has no dedicated STATUS message of its own. Sent by
+ * whichever unit executed the command (the Andruav app, or a module for
+ * module-less commands) back to the requesting party. Module-owned commands
+ * keep replying on their own STATUS message (e.g. GPIO_STATUS, TELNET_STATUS);
+ * this is the catch-all ack for the rest.
+ * @direction MODULE_TO_WEB-equivalent (unit -> requesting party, targeted)
+ * @rate ON_DEMAND - at most one reply per executed command
+ * @discard NO - a command result, must be delivered for request/response UX
+ * fields: C int REQUIRED - echoed RemoteCommand id being answered (e.g.
+ *  RemoteCommand_SMSwGPS); er int REQUIRED - result code
+ *  (REMOTE_EXECUTE_RESULT_*, 0=ok); DS string OPTIONAL - human-readable
+ *  detail; rq int OPTIONAL - echoed request id if the command carried one
+ */
+#define TYPE_AndruavMessage_RemoteExecute_Result               1084
 
 //Binary Starts with 2000
 
@@ -1615,6 +1631,16 @@
 #define RemoteCommand_MAKEFLASH                             117 // Toggle flash using LED and Screen
 #define RemoteCommand_CONNECT_FCB                           118 // no-op on the receiving side (case exists, body is just `break;`)
 
+
+// TYPE_AndruavMessage_RemoteExecute_Result (1084) "er" result codes
+#define REMOTE_EXECUTE_RESULT_OK                            0   // command executed / dispatched
+#define REMOTE_EXECUTE_RESULT_ERROR                         1   // generic failure (see DS)
+#define REMOTE_EXECUTE_RESULT_NOT_READY                     2   // no handler available to execute the command
+#define REMOTE_EXECUTE_RESULT_REJECTED                      3   // refused (e.g. sender cannot control this unit)
+#define REMOTE_EXECUTE_RESULT_NO_LOCATION                   4   // required location unavailable
+#define REMOTE_EXECUTE_RESULT_NO_CAPABILITY                 5   // device lacks the capability (e.g. no SMS hardware)
+#define REMOTE_EXECUTE_RESULT_PERMISSION_DENIED             6   // missing OS/user permission
+#define REMOTE_EXECUTE_RESULT_NO_RECIPIENT                  7   // empty/invalid target (e.g. phone number)
 
 
 // Drone Report
