@@ -1707,7 +1707,22 @@
 #define PERMISSION_ALLOW_GCS_MODES_CONTROL  0x00000200
 #define PERMISSION_ALLOW_GCS_MODES_SERVOS   0x00000400
 #define PERMISSION_ALLOW_GCS_VIDEO          0x0000f000
-#define PERMISSION_ALLOW_SWARM              0x000f0000
+
+// Category/action permission bits (bits 16-25). Synced from canonical
+// de_comm messages.hpp.  When all are zero and the view-mode bit (29) is
+// set, the account is a read-only view-mode GCS.
+#define PERMISSION_CATEGORY_ACTION_MASK    0x03ffffff
+#define PERMISSION_ALLOW_SWARM              0x00010000   // bit 16
+#define PERMISSION_ALLOW_TRACKING           0x00020000   // bit 17
+#define PERMISSION_ALLOW_GEOFENCE           0x00040000   // bit 18
+#define PERMISSION_ALLOW_SOUND              0x00080000   // bit 19
+#define PERMISSION_ALLOW_SDR                0x00100000   // bit 20
+#define PERMISSION_ALLOW_GPIO               0x00200000   // bit 21
+#define PERMISSION_ALLOW_TELNET             0x00400000   // bit 22
+#define PERMISSION_ALLOW_P2P                0x00800000   // bit 23
+#define PERMISSION_ALLOW_CHAT               0x01000000   // bit 24
+#define PERMISSION_ALLOW_CONFIG             0x02000000   // bit 25
+#define PERMISSION_ALLOW_VIEW_MODE          0x20000000   // bit 29
 
 
 // DistinationLocation Types
@@ -1763,6 +1778,19 @@
 #define PRECLAND_ACTION_ENABLE                              1
 #define PRECLAND_ACTION_SET_TARGET                          2   // uses field b (target_num)
 #define PRECLAND_ACTION_SELFTEST                            3   // validate camera.yaml + layout, report via STATUS
+#define PRECLAND_ACTION_CALIBRATE                           4   // chessboard camera calibration -> camera.yaml
+                                                            // fields b=cols c=rows d=square_size_m e=views
+                                                            // T4/F-6: width/height (f/g) removed —
+                                                            // calibration runs at the configured capture resolution.
+                                                            // T6/F-8: requires PERMISSION_ALLOW_CONFIG (bit 25).
+#define PRECLAND_ACTION_CALIBRATE_CANCEL                    5   // cancel a running calibration (no fields)
+
+// PRECLAND_CALIB_STATUS_* : calibration sub-state reported in PRECLAND_STATUS field [g]
+#define PRECLAND_CALIB_STATUS_IDLE                          0   // no calibration running
+#define PRECLAND_CALIB_STATUS_CAPTURING                     1   // capturing chessboard views
+#define PRECLAND_CALIB_STATUS_COMPUTING                     2   // running cv::calibrateCamera
+#define PRECLAND_CALIB_STATUS_DONE                          3   // success, camera.yaml written (field [j] = RMS)
+#define PRECLAND_CALIB_STATUS_FAILED                        4   // failed (not enough views / write error)
 
 // TYPE_AndruavMessage_PRECLAND_STATUS
 #define PRECLAND_STATUS_DISABLED                            0
@@ -1770,6 +1798,17 @@
 #define PRECLAND_STATUS_LOCKED                              2
 #define PRECLAND_STATUS_DEGRADED                            3   // detecting, but gated (RMSE/stale)
 #define PRECLAND_STATUS_ERROR                               4   // no camera / no camera.yaml / bad layout
+
+// PRECLAND_REASON_* : module-internal gate reason codes used by de_precland's
+// publish gate (precland_gate.hpp). Not sent on the wire; the GCS only sees the
+// resulting PRECLAND_STATUS_* state. preclandReasonName() maps these to text
+// for local logs and the debug overlay.
+#define PRECLAND_REASON_NOMINAL                             0
+#define PRECLAND_REASON_NO_TARGET                           1
+#define PRECLAND_REASON_STALE                               2
+#define PRECLAND_REASON_MIN_TAGS                            3
+#define PRECLAND_REASON_RMSE                                4
+#define PRECLAND_REASON_ERROR                               5
 
 // TYPE_AndruavMessage_CONFIG_ACTION
 #define CONFIG_ACTION_Restart                               0
