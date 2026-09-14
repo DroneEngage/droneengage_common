@@ -17,6 +17,8 @@ std::string get_time_string();
 
 uint64_t get_time_usec();
 
+uint64_t get_time_usec_monotonic();
+
 int wait_time_nsec (const time_t& seconds, const long& nano_seconds);
 
 std::string str_tolower(std::string s);
