@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <regex>
+#include <cctype>
 #include "../helpers/colors.hpp"
 #include "../helpers/helpers.hpp"
 
@@ -34,6 +35,11 @@ void CLocalConfigFile::InitConfigFile (const char* fileURL)
 
 void CLocalConfigFile::apply()
 {
+    if (m_parseFailed)
+    {
+        std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "apply() SKIPPED: local config file failed to parse — refusing to overwrite the on-disk file." << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        return;
+    }
     WriteFile (m_fileURL.c_str());
 }
 
@@ -88,11 +94,32 @@ void CLocalConfigFile::ReadFile (const char * fileURL)
 
 bool CLocalConfigFile::ParseData (std::string jsonString)
 {
+    m_parseFailed = false;
+
 #ifndef DE_DISABLE_TRY
     try
     {
 #endif
-        m_ConfigJSON = Json_de::parse(removeComments(jsonString));
+        std::string cleaned = removeComments(jsonString);
+
+        // Remove trailing commas before } or ] (tolerant of human-edited JSON)
+        std::string tolerant;
+        tolerant.reserve(cleaned.size());
+        for (size_t i = 0; i < cleaned.size(); ++i)
+        {
+            if (cleaned[i] == ',')
+            {
+                size_t j = i + 1;
+                while (j < cleaned.size() && std::isspace(static_cast<unsigned char>(cleaned[j]))) ++j;
+                if (j < cleaned.size() && (cleaned[j] == '}' || cleaned[j] == ']'))
+                {
+                    continue;
+                }
+            }
+            tolerant += cleaned[i];
+        }
+
+        m_ConfigJSON = Json_de::parse(tolerant);
 #ifndef DE_DISABLE_TRY
    }
    catch(const std::exception& e)
@@ -123,6 +150,7 @@ bool CLocalConfigFile::ParseData (std::string jsonString)
               << "  The file contains invalid JSON. Please fix it and retry.\n"
               << "========================================================"
               << _NORMAL_CONSOLE_TEXT_ << std::endl;
+    m_parseFailed = true;
     exit(1);
    }
 #endif

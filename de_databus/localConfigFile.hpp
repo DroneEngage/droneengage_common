@@ -67,6 +67,7 @@ namespace de
             std::string m_fileURL;
             std::stringstream m_fileContents;
             Json_de m_ConfigJSON;
+            bool m_parseFailed = false;
         
 
     };

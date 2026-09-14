@@ -20,3 +20,7 @@
 #define DRONE_DEPILOT_SUBOPERATION_UPDATED "d_f_de_s"
 
 #define DRONE_FENCE_ACTION "onFenceAction"
+
+#define DRONE_COMM_LINE_ONLINE           "d_cl_on"
+#define DRONE_COMM_LINE_OFFLINE_REQUEST  "d_cl_off_r"
+#define DRONE_COMM_LINE_OFFLINE_ERROR    "d_cl_off_e"

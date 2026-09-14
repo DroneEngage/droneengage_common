@@ -3,7 +3,7 @@
 
 
 #include <iostream>
-
+#include <cstdint>
 
 
 namespace helpers
@@ -34,14 +34,19 @@ namespace helpers
         public:
             int get_rpi_model ()  const;
             bool get_cpu_serial (std::string &cpu_serial)  const;
-            
+
+            bool get_cpu_temprature(uint32_t &cpu_temprature) const;
+            bool get_throttled (uint32_t &cpu_serial) const ;
+
         protected:
             // Called in the constructor once
             int _check_rpi_version();
-            
+            int _check_rpi_version_by_rev();
+
 
         private:
             int _rpi_version = -1;
+            bool _not_found = true;
     };
 }
 
