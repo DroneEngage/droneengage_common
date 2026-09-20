@@ -21,6 +21,7 @@ namespace de
         protected:
             virtual void parseRemoteExecute(Json_de &andruav_message) = 0;
             virtual void parseCommand(Json_de &andruav_message, const char *full_message, const int &full_message_length, int messageType, uint32_t permission) = 0;
+            virtual void onConfigUpdated(const Json_de &cmd) {}
 
         private:
             void parseDefaultCommand(Json_de &andruav_message, const char *full_message, const int &full_message_length, int messageType, uint32_t permission);

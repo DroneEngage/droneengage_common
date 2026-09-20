@@ -77,10 +77,13 @@ void CAndruavMessageParserBase::handleConfigAction(Json_de &andruav_message, con
         break;
     case CONFIG_ACTION_APPLY_CONFIG:
     {
+        if (!validateField(cmd, "c", Json_de::value_t::object))
+            return;
         Json_de config = cmd["c"];
         std::cout << config << std::endl;
         de::CConfigFile &cConfigFile = de::CConfigFile::getInstance();
         cConfigFile.updateJSON(config.dump());
+        onConfigUpdated(cmd);
     }
     break;
     case CONFIG_REQUEST_FETCH_CONFIG_TEMPLATE:
