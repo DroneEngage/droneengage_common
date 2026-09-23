@@ -73,6 +73,8 @@ namespace comm
                 m_hardware_serial_type = HARDWARE_TYPE_UNDEFINED;
 
             }
+
+            ~CModule() { uninit(); }
         
         public:
 
