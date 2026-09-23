@@ -1404,7 +1404,8 @@
  * fields: a int REQUIRED (CAMERA_OVERLAY_ACTION_* code);
  *  t string OPTIONAL (target camera unique_name or local_name; absent or
  *   empty = all cameras);
- *  i int REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE (shape id);
+ *  i int REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE and
+ *   CAMERA_OVERLAY_ACTION_MOVE_SHAPE (shape id);
  *  s object REQUIRED for CAMERA_OVERLAY_ACTION_SET_SHAPE:
  *   id int REQUIRED; type string REQUIRED ("line"|"rect"|"circle"|"text");
  *   x1,y1,x2,y2 double OPTIONAL 0..1 normalised (line endpoints / rect
@@ -1414,6 +1415,9 @@
  *   height); thickness int OPTIONAL (px, min 2); filled bool OPTIONAL
  *   (rect/circle); text string OPTIONAL (text only, ASCII);
  *   color array<int> OPTIONAL [r,g,b] or [r,g,b,a], 0..255
+ *  x1,y1,x2,y2 double REQUIRED for CAMERA_OVERLAY_ACTION_MOVE_SHAPE
+ *   (0..1 normalised; applied to the existing shape keeping its style;
+ *   unknown id is ignored - resend SET_SHAPE to (re)create it)
  */
 #define TYPE_AndruavMessage_CAMERA_OVERLAY_ACTION               6539
 
@@ -1878,6 +1882,7 @@
 #define CAMERA_OVERLAY_ACTION_SET_SHAPE                     0   // add/replace shape by id (field s)
 #define CAMERA_OVERLAY_ACTION_REMOVE_SHAPE                  1   // remove shape by id (field i)
 #define CAMERA_OVERLAY_ACTION_CLEAR                         2   // clear all shapes
+#define CAMERA_OVERLAY_ACTION_MOVE_SHAPE                    3   // update geometry of existing shape (fields i + x1,y1,x2,y2)
 
 #define CONFIG_STATUS_FETCH_CONFIG_TEMPLATE                 0
 #define CONFIG_STATUS_FETCH_CONFIG                          1
