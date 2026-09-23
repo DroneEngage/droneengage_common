@@ -1393,6 +1393,29 @@
  *  j double OPTIONAL (calibration RMS px, present on completion)
  */
 #define TYPE_AndruavMessage_PRECLAND_STATUS                     6538
+/**
+ * @brief GCS controls the de_camera on-screen video overlay: add/replace a
+ *  shape by id, remove a shape by id, or clear all shapes on a camera.
+ * @direction WEB_TO_MODULE - mapped to PERMISSION_ALLOW_GCS_VIDEO in de_comm
+ *  (a camera-control action)
+ * @rate ON_DEMAND
+ * @discard YES - overlay state is latest-wins; a dropped update is superseded
+ *  by the next set/clear
+ * fields: a int REQUIRED (CAMERA_OVERLAY_ACTION_* code);
+ *  t string OPTIONAL (target camera unique_name or local_name; absent or
+ *   empty = all cameras);
+ *  i int REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE (shape id);
+ *  s object REQUIRED for CAMERA_OVERLAY_ACTION_SET_SHAPE:
+ *   id int REQUIRED; type string REQUIRED ("line"|"rect"|"circle"|"text");
+ *   x1,y1,x2,y2 double OPTIONAL 0..1 normalised (line endpoints / rect
+ *   top-left+bottom-right / circle+text anchor);
+ *   radius double OPTIONAL (circle only, fraction of frame height);
+ *   text_height double OPTIONAL (text only, glyph height as fraction of frame
+ *   height); thickness int OPTIONAL (px, min 2); filled bool OPTIONAL
+ *   (rect/circle); text string OPTIONAL (text only, ASCII);
+ *   color array<int> OPTIONAL [r,g,b] or [r,g,b,a], 0..255
+ */
+#define TYPE_AndruavMessage_CAMERA_OVERLAY_ACTION               6539
 
 #define MODULE_HEALTH_ACTION_STATUS                             0
 
@@ -1850,6 +1873,11 @@
 #define CONFIG_REQUEST_FETCH_CONFIG                         3
 #define CONFIG_ACTION_SHUT_DOWN_HW                          4
 #define CONFIG_ACTION_RESTART_HW                            5
+
+// TYPE_AndruavMessage_CAMERA_OVERLAY_ACTION
+#define CAMERA_OVERLAY_ACTION_SET_SHAPE                     0   // add/replace shape by id (field s)
+#define CAMERA_OVERLAY_ACTION_REMOVE_SHAPE                  1   // remove shape by id (field i)
+#define CAMERA_OVERLAY_ACTION_CLEAR                         2   // clear all shapes
 
 #define CONFIG_STATUS_FETCH_CONFIG_TEMPLATE                 0
 #define CONFIG_STATUS_FETCH_CONFIG                          1
