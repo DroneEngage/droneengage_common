@@ -844,6 +844,67 @@
  */
 #define TYPE_AndruavMessage_RemoteExecute_Result               1084
 
+/**
+ * @brief Upload a Phase-2 de.operation/2 mission package to a unit. Handled by
+ *  the Mission Supervisor in de_comm (TASK-P2-03); the package travels as its
+ *  canonical JSON string so de_comm can verify the SHA-256 hash over the
+ *  received bytes without re-serializing.
+ * @direction WEB_TO_MODULE (GCS -> de_comm)
+ * @rate ON_DEMAND
+ * @discard NO - a package upload must be delivered; permission-gated
+ *  (PERMISSION_ALLOW_GCS_WP_CONTROL, same as Upload_DE_Mission 1075)
+ * fields: pkg string REQUIRED (canonical JSON of the Package, without hash);
+ *  hash string REQUIRED ("sha256:<64 hex>"); e bool OPTIONAL (erase fences
+ *  first, same meaning as 1075)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_DE_Package_Upload                  1085
+/**
+ * @brief Operator command to the onboard Mission Supervisor: start/stop/
+ *  pause/resume a run, activate a mission, inject an event, or request
+ *  status/journal.
+ * @direction WEB_TO_MODULE (GCS -> de_comm)
+ * @rate ON_DEMAND
+ * @discard NO - operator commands must be delivered; permission-gated
+ *  (PERMISSION_ALLOW_GCS_WP_CONTROL)
+ * fields: a string REQUIRED ("start"|"stop"|"pause"|"resume"|"activate"|
+ *  "fire"|"clear"|"status"|"journal"); mission string OPTIONAL (activate);
+ *  event string OPTIONAL (fire); payload object OPTIONAL (fire); from int
+ *  OPTIONAL (journal: first line index)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_DE_Supervisor_Action               1086
+/**
+ * @brief Mission Supervisor state report: active engine, run state, active
+ *  mission/step, preemption stack and last fault.
+ * @direction MODULE_TO_WEB (de_comm -> GCS)
+ * @rate ON_DEMAND on every state change + periodic ~5s while RUNNING/PAUSED
+ * @discard YES - latest status snapshot supersedes older ones
+ * fields: eng string ("v1"|"v2"); st string (NO_PACKAGE|READY|RUNNING|PAUSED|
+ *  COMPLETED|STOPPED|FAULT); pkg_hash/op/role strings OPTIONAL; run string
+ *  (run uuid, empty when not running); mis/mst (active mission id + state);
+ *  step/seq (current manifest step + FC seq); stack array (preempted
+ *  missions); err string (last fault text)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_DE_Supervisor_Status               1087
+/**
+ * @brief A page of the Supervisor journal (append-only, timestamped record of
+ *  transitions/triggers/actions). Sent in reply to Supervisor_Action
+ *  a="journal"; at most ~4KB of lines per message.
+ * @direction MODULE_TO_WEB (de_comm -> GCS)
+ * @rate ON_DEMAND
+ * @discard NO - journal lines must not be silently dropped mid-download
+ * fields: run string (run uuid); from int (first line index); lines
+ *  array<string>; more bool (true when further pages exist)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_DE_Supervisor_Journal              1088
+
 //Binary Starts with 2000
 
 //deprecated telemetry technology
@@ -1420,6 +1481,44 @@
  *   unknown id is ignored - resend SET_SHAPE to (re)create it)
  */
 #define TYPE_AndruavMessage_CAMERA_OVERLAY_ACTION               6539
+/**
+ * @brief Phase-2 Mission Supervisor -> nav adapter command: upload/verify FC
+ *  mission items, jump to a seq, hold, upload-and-start, guided goto/orbit,
+ *  or unload (back to the v1 engine). Intermodule only; never routed to the
+ *  GCS. "id" is a de_comm counter echoed back in the result.
+ * @direction MODULE_TO_MODULE (de_comm -> de_mavlink, onboard UDP bus)
+ * @rate ON_DEMAND
+ * @discard NO - FC command path; every action is answered by a
+ *  NAV_ADAPTER_STATUS "result"
+ * fields: a string REQUIRED ("load"|"check"|"goto"|"hold"|"upload_start"|
+ *  "guided"|"unload"); id int REQUIRED; hash string OPTIONAL (load/check:
+ *  sha256 of the item set); items array OPTIONAL (load/check/upload_start:
+ *  wire fc_items [{"c","ft","mv"}]); seq int OPTIONAL (goto); auto bool
+ *  OPTIONAL (goto: switch to AUTO); start int OPTIONAL (upload_start);
+ *  k string OPTIONAL (guided: "goto"|"orbit"); lat/lng/alt/r OPTIONAL
+ *  (guided target/orbit radius)
+ * @note 6539 was already taken by CAMERA_OVERLAY_ACTION when this was added.
+ *  Wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_NAV_ADAPTER_ACTION                 6540
+/**
+ * @brief Nav adapter -> Mission Supervisor replies and unsolicited FC events:
+ *  action result, MISSION_CURRENT / MISSION_ITEM_REACHED changes, mode/arm/
+ *  flying changes, and a capability "hello".
+ * @direction MODULE_TO_MODULE (de_mavlink -> de_comm, onboard UDP bus)
+ * @rate ON_DEMAND + per FC event
+ * @discard MIXED - "current" is latest-wins; "result"/"reached"/"hello" must
+ *  be delivered
+ * fields: e string REQUIRED ("result"|"current"|"reached"|"mode"|"hello");
+ *  id int OPTIONAL (result: echoed action id); ok bool + err string OPTIONAL
+ *  (result); seq int OPTIONAL (current/reached); mm int OPTIONAL (current:
+ *  mission_mode); mode int + armed/flying bool OPTIONAL (mode); ver int
+ *  (hello, sent on start and in reply to unknown actions)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ */
+#define TYPE_AndruavMessage_NAV_ADAPTER_STATUS                 6541
 
 #define MODULE_HEALTH_ACTION_STATUS                             0
 

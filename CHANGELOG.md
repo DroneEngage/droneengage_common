@@ -4,6 +4,11 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.7.3] - 2026-09-27
+
+- Added the Phase-2 mission-planner message IDs (TASK-P2-01): `DE_Package_Upload` (1085), `DE_Supervisor_Action` (1086), `DE_Supervisor_Status` (1087), `DE_Supervisor_Journal` (1088) for GCS↔unit traffic, and `NAV_ADAPTER_ACTION` (6540) / `NAV_ADAPTER_STATUS` (6541) for the de_comm↔de_mavlink nav adapter. Wire formats are normative in `Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md`. 6539 was already taken by `CAMERA_OVERLAY_ACTION`, so the nav adapter pair moved to 6540/6541.
+- Earlier 10.7.x: `onConfigUpdated` hook, camera overlay action messages, heartbeat thread-join fix, `CAMERA_OVERLAY_ACTION_MOVE_SHAPE`.
+
 ## [10.7.0] - 2026-09
 
 - Added monotonic-clock time helpers (`get_time_usec_monotonic`) so elapsed-time checks are not affected by system clock changes.
