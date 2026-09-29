@@ -56,13 +56,16 @@ namespace comm
 {
 
 /**
- * @brief Phase-3 invoke handler signature. Receives the capability
- * namespace, the action name and the ALREADY-VALIDATED params (checked
- * against the advert, defaults filled in). Return the action's result
- * object (sent as CAPABILITY_RESULT "data"), or set `err` to fail the
- * invoke. Runs on a worker thread - never on the receive thread.
+ * @brief Phase-3 invoke handler signature. Receives the invoke id (the
+ * CAPABILITY_INVOKE "id", for correlating events fired by the action),
+ * the capability namespace, the action name and the ALREADY-VALIDATED
+ * params (checked against the advert, defaults filled in). Return the
+ * action's result object (sent as CAPABILITY_RESULT "data"), or set `err`
+ * to fail the invoke. Runs on a worker thread - never on the receive
+ * thread.
  */
-typedef std::function<Json_de (const std::string& ns,
+typedef std::function<Json_de (const std::string& id,
+                               const std::string& ns,
                                const std::string& act,
                                const Json_de& params,
                                std::string& err)> CapabilityInvokeHandler;

@@ -634,13 +634,13 @@ void de::comm::CModule::runInvokeOnWorker (const std::string& id, const std::str
     std::thread([this, id, ns, act, params, deadline_s, handler]()
     {
         std::future<Json_de> fut = std::async(std::launch::async,
-            [handler, ns, act, params]() -> Json_de
+            [handler, id, ns, act, params]() -> Json_de
             {
                 Json_de res = {{"ok", true}};
                 std::string err;
                 try
                 {
-                    const Json_de data = handler(ns, act, params, err);
+                    const Json_de data = handler(id, ns, act, params, err);
                     if (!err.empty())
                     {
                         res["ok"]  = false;
