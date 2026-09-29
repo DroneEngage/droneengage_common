@@ -107,7 +107,49 @@ void CFacade_Base::API_sendConfigTemplate(const std::string& target_party_id, co
 #ifdef DEBUG
     std::cout << std::endl << _INFO_CONSOLE_TEXT << "API_sendConfigTemplate: module_key:" << module_key << _NORMAL_CONSOLE_TEXT_ << std::endl;
     std::cout << std::endl << _INFO_CONSOLE_TEXT << "API_sendConfigTemplate: json_file_content_json:" << json_file_content_json.dump() << _NORMAL_CONSOLE_TEXT_ << std::endl;
-#endif    
+#endif
 
     return ;
+}
+
+
+/**
+ * @brief Phase-3: publish this module's de.cap/1 advert(s). Validates each
+ * advert, derives the "ch" hash that rides in the module ID message, and
+ * subscribes MODULE_CAPABILITIES/CAPABILITY_INVOKE in the message filter.
+ * See CModule::setCapabilities.
+ */
+bool CFacade_Base::setCapabilities(const std::vector<std::string>& adverts)
+{
+    return m_module.setCapabilities(adverts);
+}
+
+
+/**
+ * @brief Phase-3: register the action handler for CAPABILITY_INVOKE.
+ * Params arrive validated; repeated invoke ids replay the cached result.
+ */
+void CFacade_Base::onInvoke(CapabilityInvokeHandler handler)
+{
+    m_module.onInvoke(handler);
+}
+
+
+/**
+ * @brief Phase-3: publish changed state keys for a namespace
+ * (MODULE_STATE 6545, intermodule).
+ */
+void CFacade_Base::publishState(const std::string& ns, const Json_de& changed, const bool full)
+{
+    m_module.publishState(ns, changed, full);
+}
+
+
+/**
+ * @brief Phase-3: fire "<ns>.<ev>" as a Sync_EventFire with payload in
+ * "ed" and a fresh nonce in "n" (intermodule only).
+ */
+void CFacade_Base::fireEvent(const std::string& ns, const std::string& ev, const Json_de& payload)
+{
+    m_module.fireEvent(ns, ev, payload);
 }

@@ -1,6 +1,8 @@
 #ifndef P2P_ESP32_FACADE_BASE_H_
 #define P2P_ESP32_FACADE_BASE_H_
 
+#include <vector>
+
 #include "../helpers/json_nlohmann.hpp"
 using Json_de = nlohmann::json;
 
@@ -45,6 +47,13 @@ namespace de
              * non-Linux host).
              */
             void sendMemoryStatus(const std::string &target_party_id) const;
+
+            // Phase-3 capability advert helpers - thin pass-throughs to
+            // CModule (see de_module.hpp for the semantics).
+            bool setCapabilities(const std::vector<std::string> &adverts);
+            void onInvoke(CapabilityInvokeHandler handler);
+            void publishState(const std::string &ns, const Json_de &changed, const bool full = false);
+            void fireEvent(const std::string &ns, const std::string &ev, const Json_de &payload);
 
         protected:
             CModule &m_module = de::comm::CModule::getInstance();

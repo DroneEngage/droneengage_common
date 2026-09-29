@@ -6,6 +6,11 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
+#include <deque>
+#include <functional>
+#include <map>
+#include <set>
+#include <vector>
 
 #include "../helpers/json_nlohmann.hpp"
 #include "udpClient.hpp"
@@ -47,9 +52,23 @@ typedef enum {
 
 namespace de
 {
-
 namespace comm
 {
+
+/**
+ * @brief Phase-3 invoke handler signature. Receives the capability
+ * namespace, the action name and the ALREADY-VALIDATED params (checked
+ * against the advert, defaults filled in). Return the action's result
+ * object (sent as CAPABILITY_RESULT "data"), or set `err` to fail the
+ * invoke. Runs on a worker thread - never on the receive thread.
+ */
+typedef std::function<Json_de (const std::string& ns,
+                               const std::string& act,
+                               const Json_de& params,
+                               std::string& err)> CapabilityInvokeHandler;
+
+
+
     class CModule : public CCallBack_UDPClient
     {
         public:
@@ -207,7 +226,56 @@ namespace comm
         public:
 
             void appendExtraField(const std::string name, const Json_de& ms);
-        
+
+        public:
+
+            /**
+             * @brief Phase-3 capability adverts (de.cap/1 documents).
+             *  One advert string per namespace this module owns; each is
+             *  validated and its "ch" hash is appended to the module ID
+             *  message (extra field "ch"). Also subscribes this module to
+             *  MODULE_CAPABILITIES / CAPABILITY_INVOKE in the message
+             *  filter. Call before init(), or call again after a change -
+             *  the ID message is regenerated either way.
+             * @return false (+ log) when any advert fails validation
+             */
+            bool setCapabilities (const std::vector<std::string>& adverts);
+
+            /**
+             * @brief register the action handler invoked by
+             *  CAPABILITY_INVOKE. Params arrive already validated against
+             *  the advert (defaults filled). Results are idempotent:
+             *  a repeated invoke "id" replays the cached result without
+             *  calling the handler again (last 64 ids kept).
+             */
+            void onInvoke (CapabilityInvokeHandler handler);
+
+            /**
+             * @brief publish changed state keys for namespace `ns`
+             *  (MODULE_STATE 6545, intermodule). full=true sends a complete
+             *  snapshot that replaces the stored state.
+             */
+            void publishState (const std::string& ns, const Json_de& changed, const bool full = false);
+
+            /**
+             * @brief fire a capability event as Sync_EventFire
+             *  d="<ns>.<ev>", ed=payload, n=<fresh nonce>, no "sc" -
+             *  intermodule only, so de_comm's acceptExternalEvent
+             *  de-duplicates by sender|d|n and never drops it on scope.
+             */
+            void fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload);
+
+        private:
+
+            void capAddToFilter (const int msg_id);
+            void sendCapabilities ();
+            void handleCapabilityInvoke (const Json_de& cmd);
+            void sendInvokeResult (const Json_de& result);
+            void cacheInvokeResult (const std::string& id, const Json_de& result);
+            void runInvokeOnWorker (const std::string& id, const std::string& ns,
+                                    const std::string& act, const Json_de& params,
+                                    const double deadline_s);
+
         protected:
             std::map <std::string,Json_de> m_stdinValues;
             
@@ -273,9 +341,23 @@ namespace comm
             
             Json_de m_message_filter;
 
+            // Phase-3 capability helper state
+            std::vector<std::string> m_capability_adverts;   // raw strings, as sent
+            Json_de m_capability_parsed = Json_de::array();  // parsed, same order
+            std::string m_capability_hash;                   // ID "ch" field
+            CapabilityInvokeHandler m_onInvoke = nullptr;
+            bool m_capabilities_sent = false;
+            // invoke idempotency: id -> result, last 64 kept (FIFO)
+            std::map<std::string, Json_de> m_invoke_results;
+            std::deque<std::string> m_invoke_order;
+            std::set<std::string> m_invoke_inflight;         // running right now
+            std::atomic<uint64_t> m_event_counter {0};
+            bool m_initialized = false;
+
             void (*m_OnReceive)(const char *, int len, Json_de jMsg) = nullptr;
 
             std::mutex m_lock;
+            std::mutex m_cap_lock;   // guards m_invoke_* tables
 
         private:
 

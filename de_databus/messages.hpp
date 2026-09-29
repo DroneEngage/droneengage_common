@@ -904,6 +904,23 @@
  *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_DE_Supervisor_Journal              1088
+/**
+ * @brief Phase-3 unit capability registry view. de_comm pushes the unit's
+ *  module adverts (de.cap/1 documents) and latest module state to the GCS,
+ *  full snapshot or delta. The GCS may send a read-only request {r:true} -
+ *  deliberately NOT in andruav_permission_map.cpp (absent type = no
+ *  permission needed, same as the status requests).
+ * @direction BIDIRECTIONAL (de_comm -> GCS push; GCS -> de_comm request)
+ * @rate ON_DEMAND + on registry/state change (state deltas coalesced)
+ * @discard MIXED - a dropped full snapshot is re-requested; deltas are
+ *  latest-wins per namespace
+ * fields: full bool OPTIONAL (true = complete snapshot, absent = delta);
+ *  caps object OPTIONAL {ns: {ch, module, ver, advert-object} | null};
+ *  state object OPTIONAL {ns: {key: value}}; request: r bool
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ */
+#define TYPE_AndruavMessage_UNIT_CAPABILITIES                1089
 
 //Binary Starts with 2000
 
@@ -1519,6 +1536,62 @@
  *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_NAV_ADAPTER_STATUS                 6541
+/**
+ * @brief Phase-3 capability advert. A module sends its de.cap/1 advert(s)
+ *  once after registration and in reply to a de_comm request; each advert
+ *  travels as a STRING inside "caps" so the hash stays stable. The module
+ *  ID message carries only the hash "ch" (first 16 hex of SHA-256 over the
+ *  advert strings joined by '\n').
+ * @direction MODULE_TO_MODULE (module <-> de_comm, onboard UDP bus).
+ *  Intermodule only - dropped if it arrives from the server
+ *  (CSupervisor::shouldBlockServerMessage).
+ * @rate ON_DEMAND - once after registration, on request, on change
+ * @discard NO - the registry depends on it
+ * fields: caps array<string> + ch string (module->de_comm); request:
+ *  r bool (de_comm->module)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ */
+#define TYPE_AndruavMessage_MODULE_CAPABILITIES              6542
+/**
+ * @brief Phase-3 action invocation: run capability <ns>.<act> with params
+ *  "p", idempotent by "id" (the module replays the cached result for a
+ *  repeated id and never runs the handler twice).
+ * @direction MODULE_TO_MODULE (de_comm -> owner module). Intermodule only.
+ * @rate ON_DEMAND
+ * @discard NO - it is a command; the reply is CAPABILITY_RESULT
+ * fields: id string REQUIRED; ns string REQUIRED; act string REQUIRED;
+ *  p object OPTIONAL (params); dl number OPTIONAL (deadline seconds,
+ *  default 10)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ */
+#define TYPE_AndruavMessage_CAPABILITY_INVOKE                6543
+/**
+ * @brief Phase-3 invoke reply. Cached by the module (last 64 ids) so a
+ *  resent invoke replays the same result.
+ * @direction MODULE_TO_MODULE (module -> de_comm). Intermodule only.
+ * @rate ON_DEMAND
+ * @discard NO - one per invoke
+ * fields: id string REQUIRED (echoed); ok bool REQUIRED; err string
+ *  OPTIONAL (when !ok); data any OPTIONAL (action result)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ */
+#define TYPE_AndruavMessage_CAPABILITY_RESULT                6544
+/**
+ * @brief Phase-3 module state publication. Changed keys only, or a full
+ *  snapshot with full:true. Only accepted by de_comm from the module that
+ *  owns the namespace.
+ * @direction MODULE_TO_MODULE (module -> de_comm). Intermodule only.
+ * @rate ON_DEMAND - on state change
+ * @discard YES - latest-wins; de_comm holds the merged snapshot
+ * fields: ns string REQUIRED; s object REQUIRED (key->value);
+ *  full bool OPTIONAL
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ */
+#define TYPE_AndruavMessage_MODULE_STATE                     6545
 
 #define MODULE_HEALTH_ACTION_STATUS                             0
 

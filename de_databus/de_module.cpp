@@ -1,9 +1,11 @@
 #include <chrono>
+#include <future>
 
 #include "../helpers/colors.hpp"
 #include "../helpers/helpers.hpp"
 #include "de_module.hpp"
 #include "de_facade_base.hpp"
+#include "cap_schema.hpp"
 
 
 
@@ -75,6 +77,8 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
 
     m_health_thread_exit = false;
     m_health_thread = std::thread(&CModule::healthHeartbeatLoop, this);
+
+    m_initialized = true;
 
     return true;
 }
@@ -336,23 +340,43 @@ void de::comm::CModule::onReceive (const char * message, int len)
                     m_group_id = std::string(unit_ids[ANDRUAV_PROTOCOL_GROUP_ID].get<std::string>());
                     
                     if (!bFirstReceived)
-                    { 
+                    {
                         // tell server you dont need to send ID again.
                         std::cout << _SUCCESS_CONSOLE_BOLD_TEXT_ << " ** Communicator Server Found" << _SUCCESS_CONSOLE_TEXT_ << ": m_party_id(" << _INFO_CONSOLE_TEXT << m_party_id << _SUCCESS_CONSOLE_TEXT_ << ") m_group_id(" << _INFO_CONSOLE_TEXT << m_group_id << _SUCCESS_CONSOLE_TEXT_ << ")" <<  _NORMAL_CONSOLE_TEXT_ << std::endl;
                         createJSONID(false);
                         bFirstReceived = true;
+                        // Phase-3: publish the advert once on registration
+                        if (!m_capabilities_sent && !m_capability_adverts.empty())
+                        {
+                            m_capabilities_sent = true;
+                            sendCapabilities();
+                        }
                     }
-                    
+
                     if (m_OnReceive!= nullptr) m_OnReceive(message, len, jMsg);
 
                     return ;
                 }
                 break;
-            
+
+            case TYPE_AndruavMessage_MODULE_CAPABILITIES:
+                {
+                    // de_comm asking for the advert (P3-01). Helper-owned:
+                    // not forwarded to the module's m_OnReceive.
+                    if (cmd.value("r", false)) sendCapabilities();
+                    return ;
+                }
+
+            case TYPE_AndruavMessage_CAPABILITY_INVOKE:
+                {
+                    handleCapabilityInvoke(cmd);
+                    return ;
+                }
+
             case TYPE_AndruavMessage_DUMMY:
                 {
                     std::cout << _SUCCESS_CONSOLE_BOLD_TEXT_ << " TYPE_AndruavMessage_DUMMY" << _SUCCESS_CONSOLE_TEXT_ << message <<  _NORMAL_CONSOLE_TEXT_ << std::endl;
-                        
+
                 }
                 break;
 
@@ -426,7 +450,7 @@ void de::comm::CModule::createJSONID (bool reSend)
         json_msg[ANDRUAV_PROTOCOL_MESSAGE_CMD] = ms;
 
         #ifdef DEBUG
-            //std::cout << json_msg.dump(4) << std::endl;              
+            //std::cout << json_msg.dump(4) << std::endl;
         #endif
 
         if (m_use_unix_socket) {
@@ -436,4 +460,332 @@ void de::comm::CModule::createJSONID (bool reSend)
         }
 
         return ;
+}
+
+
+/**
+ * @brief push a message type into the module filter (idempotent).
+ */
+void de::comm::CModule::capAddToFilter (const int msg_id)
+{
+    if (!m_message_filter.is_array()) m_message_filter = Json_de::array();
+    for (const Json_de& e : m_message_filter)
+    {
+        if (e.is_number() && e.get<int>() == msg_id) return;
+    }
+    m_message_filter.push_back(msg_id);
+}
+
+
+bool de::comm::CModule::setCapabilities (const std::vector<std::string>& adverts)
+{
+    Json_de parsed = Json_de::array();
+    for (const std::string& advert_str : adverts)
+    {
+        if (advert_str.size() > CAP_ADVERT_MAX_BYTES)
+        {
+            std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << " setCapabilities: advert exceeds "
+                      << CAP_ADVERT_MAX_BYTES << " bytes" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            return false;
+        }
+
+        Json_de advert;
+        try
+        {
+            advert = Json_de::parse(advert_str);
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << " setCapabilities: advert is not valid JSON: "
+                      << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            return false;
+        }
+
+        std::string err;
+        if (!capValidateAdvert(advert, err))
+        {
+            std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << " setCapabilities: invalid advert: "
+                      << err << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            return false;
+        }
+        parsed.push_back(advert);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_cap_lock);
+        m_capability_adverts = adverts;
+        m_capability_parsed  = parsed;
+        m_capability_hash    = capAdvertHash(adverts);
+    }
+
+    // the ID message only carries the hash; the full adverts go out on 6542
+    appendExtraField("ch", m_capability_hash);
+
+    // the helper answers capability requests and invokes itself
+    capAddToFilter(TYPE_AndruavMessage_MODULE_CAPABILITIES);
+    capAddToFilter(TYPE_AndruavMessage_CAPABILITY_INVOKE);
+
+    // refresh the cached ID message when init() already ran
+    if (m_initialized) createJSONID(false);
+
+    // registered already (party known)? send the advert now - the normal
+    // path sends it once when the first ID reply arrives
+    if (m_initialized && !m_party_id.empty() && !m_capabilities_sent)
+    {
+        m_capabilities_sent = true;
+        sendCapabilities();
+    }
+
+    return true;
+}
+
+
+void de::comm::CModule::onInvoke (CapabilityInvokeHandler handler)
+{
+    std::lock_guard<std::mutex> lock(m_cap_lock);
+    m_onInvoke = handler;
+}
+
+
+void de::comm::CModule::publishState (const std::string& ns, const Json_de& changed, const bool full)
+{
+    Json_de msg =
+    {
+        {"ns", ns},
+        {"s",  changed}
+    };
+    if (full) msg["full"] = true;
+
+    sendJMSG("", msg, TYPE_AndruavMessage_MODULE_STATE, true);
+}
+
+
+void de::comm::CModule::fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload)
+{
+    const uint64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+
+    Json_de msg =
+    {
+        {"d",  ns + "." + ev},
+        {"ed", payload},
+        {"n",  std::to_string(ms) + "-" + std::to_string(++m_event_counter)}
+    };
+
+    sendJMSG("", msg, TYPE_AndruavMessage_Sync_EventFire, true);
+}
+
+
+void de::comm::CModule::sendCapabilities ()
+{
+    Json_de caps = Json_de::array();
+    std::string ch;
+    {
+        std::lock_guard<std::mutex> lock(m_cap_lock);
+        for (const std::string& a : m_capability_adverts) caps.push_back(a);
+        ch = m_capability_hash;
+    }
+
+    Json_de msg =
+    {
+        {"caps", caps},
+        {"ch",   ch}
+    };
+
+    sendJMSG("", msg, TYPE_AndruavMessage_MODULE_CAPABILITIES, true);
+}
+
+
+void de::comm::CModule::sendInvokeResult (const Json_de& result)
+{
+    sendJMSG("", result, TYPE_AndruavMessage_CAPABILITY_RESULT, true);
+}
+
+
+void de::comm::CModule::cacheInvokeResult (const std::string& id, const Json_de& result)
+{
+    std::lock_guard<std::mutex> lock(m_cap_lock);
+    if (!m_invoke_results.count(id)) m_invoke_order.push_back(id);
+    m_invoke_results[id] = result;
+    while (m_invoke_order.size() > 64)
+    {
+        m_invoke_results.erase(m_invoke_order.front());
+        m_invoke_order.pop_front();
+    }
+}
+
+
+/**
+ * @brief one manager thread per invoke: the handler runs inside a
+ * std::async worker so the deadline is enforced without touching the
+ * receive thread. A handler that outlives its deadline keeps running;
+ * its late result is dropped and logged.
+ */
+void de::comm::CModule::runInvokeOnWorker (const std::string& id, const std::string& ns,
+                                           const std::string& act, const Json_de& params,
+                                           const double deadline_s)
+{
+    CapabilityInvokeHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(m_cap_lock);
+        handler = m_onInvoke;
+    }
+
+    std::thread([this, id, ns, act, params, deadline_s, handler]()
+    {
+        std::future<Json_de> fut = std::async(std::launch::async,
+            [handler, ns, act, params]() -> Json_de
+            {
+                Json_de res = {{"ok", true}};
+                std::string err;
+                try
+                {
+                    const Json_de data = handler(ns, act, params, err);
+                    if (!err.empty())
+                    {
+                        res["ok"]  = false;
+                        res["err"] = err;
+                    }
+                    else
+                    {
+                        res["data"] = data;
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    res["ok"]  = false;
+                    res["err"] = std::string("handler exception: ") + e.what();
+                }
+                return res;
+            });
+
+        if (fut.wait_for(std::chrono::milliseconds((long)(deadline_s * 1000.0)))
+                == std::future_status::ready)
+        {
+            Json_de result = fut.get();
+            result["id"] = id;
+            {
+                std::lock_guard<std::mutex> lock(m_cap_lock);
+                m_invoke_inflight.erase(id);
+            }
+            cacheInvokeResult(id, result);
+            sendInvokeResult(result);
+        }
+        else
+        {
+            {
+                std::lock_guard<std::mutex> lock(m_cap_lock);
+                m_invoke_inflight.erase(id);
+            }
+            Json_de result = {{"id", id}, {"ok", false}, {"err", "timeout"}};
+            cacheInvokeResult(id, result);
+            sendInvokeResult(result);
+
+            // wait for the runaway handler, then drop its result
+            Json_de late = fut.get();
+            std::cout << _LOG_CONSOLE_TEXT << "capability invoke " << id
+                      << " (" << ns << "." << act << ") finished after its deadline - result dropped"
+                      << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        }
+    }).detach();
+}
+
+
+/**
+ * @brief CAPABILITY_INVOKE {id, ns, act, p, dl}. Idempotent by "id": a
+ * repeated id replays the cached result (or is ignored while inflight).
+ * Params are validated against the advert before the handler sees them.
+ */
+void de::comm::CModule::handleCapabilityInvoke (const Json_de& cmd)
+{
+    const std::string id  = cmd.value("id", "");
+    const std::string ns  = cmd.value("ns", "");
+    const std::string act = cmd.value("act", "");
+    Json_de with = Json_de::object();
+    if (cmd.contains("p") && cmd["p"].is_object()) with = cmd["p"];
+
+    double deadline_s = 10.0;
+    if (cmd.contains("dl") && cmd["dl"].is_number())
+        deadline_s = cmd["dl"].get<double>();
+    if (deadline_s <= 0) deadline_s = 10.0;
+
+    if (id.empty()) return;
+
+    {
+        std::lock_guard<std::mutex> lock(m_cap_lock);
+
+        auto it = m_invoke_results.find(id);
+        if (it != m_invoke_results.end())
+        {
+            // idempotent replay - never run the handler twice
+            sendInvokeResult(it->second);
+            return;
+        }
+        if (m_invoke_inflight.count(id))
+        {
+            // same invoke while still running - the first result will
+            // answer the resend too
+            return;
+        }
+        m_invoke_inflight.insert(id);
+    }
+
+    auto fail = [this, &id](const std::string& err)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_cap_lock);
+            m_invoke_inflight.erase(id);
+        }
+        Json_de result = {{"id", id}, {"ok", false}, {"err", err}};
+        cacheInvokeResult(id, result);
+        sendInvokeResult(result);
+    };
+
+    // resolve "<ns>.<act>" in the adverts (copied - the adverts can be
+    // replaced by a setCapabilities on another thread)
+    Json_de action;
+    bool found = false;
+    {
+        std::lock_guard<std::mutex> lock(m_cap_lock);
+        for (const Json_de& advert : m_capability_parsed)
+        {
+            if (advert.value("ns", "") == ns)
+            {
+                const Json_de* a = capFindAction(advert, act);
+                if (a != nullptr)
+                {
+                    action = *a;
+                    found = true;
+                }
+                break;
+            }
+        }
+    }
+
+    if (!found)
+    {
+        fail("unknown action " + ns + "." + act);
+        return;
+    }
+
+    // params checked against the advert; defaults filled in
+    Json_de filled;
+    const Json_de params_schema = action.contains("params")
+        ? action["params"] : Json_de::object();
+    const std::vector<std::string> errors = capCheckParams(params_schema, with, filled);
+    if (!errors.empty())
+    {
+        std::string err;
+        for (const std::string& e : errors) { if (!err.empty()) err += "; "; err += e; }
+        fail("invalid params: " + err);
+        return;
+    }
+
+    if (m_onInvoke == nullptr)
+    {
+        fail("no invoke handler");
+        return;
+    }
+
+    runInvokeOnWorker(id, ns, act, filled, deadline_s);
 }

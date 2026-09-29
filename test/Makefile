@@ -1,29 +1,40 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-SOURCES = test_read_env_flag.cpp ../helpers/helpers.cpp
-TARGET = test_read_env_flag
-OBJECTS = $(SOURCES:.cpp=.o)
+TARGETS = test_read_env_flag test_cap_schema
 
 .PHONY: all clean test
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): $(OBJECTS)
+test_read_env_flag: test_read_env_flag.o ../helpers/helpers.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-%.o: %.cpp
+test_cap_schema: test_cap_schema.o cap_schema.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_read_env_flag.o: test_read_env_flag.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-test: $(TARGET)
-	./$(TARGET)
+test_cap_schema.o: test_cap_schema.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+cap_schema.o: ../de_databus/cap_schema.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+../helpers/helpers.o: ../helpers/helpers.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+test: $(TARGETS)
+	./test_read_env_flag
+	./test_cap_schema
 
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f *.o ../helpers/helpers.o $(TARGETS)
 
 help:
 	@echo "Available targets:"
-	@echo "  all    - Build the test executable"
-	@echo "  test   - Build and run the test"
+	@echo "  all    - Build the test executables"
+	@echo "  test   - Build and run the tests"
 	@echo "  clean  - Remove built files"
 	@echo "  help   - Show this help message"
