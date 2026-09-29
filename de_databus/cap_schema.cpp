@@ -358,18 +358,20 @@ static void capCheckValue (const Json_de& param, const Json_de& value,
         return;
     }
 
-    bool type_ok = false;
-    for (const std::string& t : types)
-        type_ok = type_ok || capValueMatches(value, t);
-    if (!type_ok)
+    // the limits below belong to the type the value actually matched - for
+    // ["string","int"] an int value must still honour min/max
+    std::string t;
+    for (const std::string& cand : types)
+    {
+        if (capValueMatches(value, cand)) { t = cand; break; }
+    }
+    if (t.empty())
     {
         std::string want;
-        for (const std::string& t : types) { if (!want.empty()) want += "|"; want += t; }
+        for (const std::string& c : types) { if (!want.empty()) want += "|"; want += c; }
         errors.push_back(path + ": expected " + want);
         return;
     }
-
-    const std::string& t = types.front();
 
     if ((t == "int" || t == "number"))
     {
@@ -470,8 +472,33 @@ std::vector<std::string> de::comm::capCheckParams (const Json_de& params_schema,
 const Json_de* de::comm::capFindAction (const Json_de& advert, const std::string& act)
 {
     if (!advert.is_object() || !advert.contains("actions")
-        || !advert["actions"].is_object()
-        || !advert["actions"].contains(act))
+        || !advert["actions"].is_object())
         return nullptr;
-    return &advert["actions"][act];
+    const Json_de& actions = advert["actions"];
+    if (actions.contains(act)) return &actions[act];
+    // a renamed action keeps answering to its old name (README rule 2)
+    for (auto it = actions.begin(); it != actions.end(); ++it)
+    {
+        if (it.value().is_object()
+            && it.value().value("deprecated_alias", "") == act)
+            return &it.value();
+    }
+    return nullptr;
+}
+
+
+std::string de::comm::capCanonicalAction (const Json_de& advert, const std::string& act)
+{
+    if (!advert.is_object() || !advert.contains("actions")
+        || !advert["actions"].is_object())
+        return std::string();
+    const Json_de& actions = advert["actions"];
+    if (actions.contains(act)) return act;
+    for (auto it = actions.begin(); it != actions.end(); ++it)
+    {
+        if (it.value().is_object()
+            && it.value().value("deprecated_alias", "") == act)
+            return it.key();
+    }
+    return std::string();
 }

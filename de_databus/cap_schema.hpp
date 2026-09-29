@@ -76,10 +76,18 @@ std::vector<std::string> capCheckParams (const Json_de& params_schema,
                                         Json_de& filled);
 
 /**
- * @brief Convenience: find action `act` inside advert `advert`.
+ * @brief Convenience: find action `act` inside advert `advert`, by name or
+ * by an action's "deprecated_alias" (the name it had before a rename).
  * @return pointer into advert, or nullptr.
  */
 const Json_de* capFindAction (const Json_de& advert, const std::string& act);
+
+/**
+ * @brief the current name of action `act` (itself, or the action whose
+ * "deprecated_alias" it is), or "" when the advert has no such action.
+ * Handlers are always called with this name.
+ */
+std::string capCanonicalAction (const Json_de& advert, const std::string& act);
 
 } // namespace comm
 } // namespace de

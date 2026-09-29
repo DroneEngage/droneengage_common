@@ -1,2 +1,4 @@
 *.o
 
+test/test_cap_schema
+test/test_read_env_flag

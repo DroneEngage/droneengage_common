@@ -248,6 +248,31 @@ bool test_message_ids ()
 }
 
 
+bool test_type_list_limits_and_alias ()
+{
+    std::cout << "Testing: type-list min/max + deprecated_alias lookup..." << std::endl;
+
+    // ["string","int"]: an int value must honour min/max, a name passes
+    const Json schema = Json::parse(R"({"pin": {"type": ["string","int"], "min": 0, "max": 40}})");
+    Json filled;
+    ASSERT_TRUE(de::comm::capCheckParams(schema, Json::parse(R"({"pin": 7})"), filled).empty());
+    ASSERT_TRUE(de::comm::capCheckParams(schema, Json::parse(R"({"pin": "drop_servo"})"), filled).empty());
+    ASSERT_FALSE(de::comm::capCheckParams(schema, Json::parse(R"({"pin": 99})"), filled).empty());
+
+    const Json advert = Json::parse(R"({"schema":"de.cap/1","ns":"camera","module":"m","ver":"1",
+        "actions":{"capture":{"deprecated_alias":"take_photo"}}})");
+    ASSERT_TRUE(de::comm::capFindAction(advert, "capture") != nullptr);
+    ASSERT_TRUE(de::comm::capFindAction(advert, "take_photo") == de::comm::capFindAction(advert, "capture"));
+    ASSERT_TRUE(de::comm::capFindAction(advert, "nope") == nullptr);
+    ASSERT_EQ(de::comm::capCanonicalAction(advert, "take_photo"), std::string("capture"));
+    ASSERT_EQ(de::comm::capCanonicalAction(advert, "capture"), std::string("capture"));
+    ASSERT_EQ(de::comm::capCanonicalAction(advert, "nope"), std::string());
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
 int main ()
 {
     bool ok = true;
@@ -258,6 +283,7 @@ int main ()
     ok &= test_advert_invalid();
     ok &= test_check_params();
     ok &= test_message_ids();
+    ok &= test_type_list_limits_and_alias();
 
     if (ok)
     {

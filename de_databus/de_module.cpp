@@ -700,7 +700,7 @@ void de::comm::CModule::handleCapabilityInvoke (const Json_de& cmd)
 {
     const std::string id  = cmd.value("id", "");
     const std::string ns  = cmd.value("ns", "");
-    const std::string act = cmd.value("act", "");
+    std::string act = cmd.value("act", "");
     Json_de with = Json_de::object();
     if (cmd.contains("p") && cmd["p"].is_object()) with = cmd["p"];
 
@@ -756,6 +756,9 @@ void de::comm::CModule::handleCapabilityInvoke (const Json_de& cmd)
                 {
                     action = *a;
                     found = true;
+                    // an old (deprecated_alias) name reaches the handler
+                    // as the action's current name
+                    act = capCanonicalAction(advert, act);
                 }
                 break;
             }
