@@ -4,6 +4,14 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.10.0] - 2026-09-30
+
+- Phase-4A coordination-fabric message IDs (TASK-P4A-01): `DE_EVENT`
+  (1090, reliable fleet event envelope), `DE_EVENT_ACK` (1091), `DE_ROSTER`
+  (1092, latest_wins on the server), `DE_WORLD` (1093) and
+  `DE_OP_CONTROL` (1094). Wire formats are normative in
+  `Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md`.
+
 ## [10.9.0] - 2026-09-30
 
 - Phase-3 capability layer (TASK-P3-01): `cap_schema` (de.cap/1 advert validation, param checks with defaults, list-of-types params such as `["string","int"]`, SHA-256 advert hash), capability message IDs (`MODULE_CAPABILITIES` 6542, `CAPABILITY_INVOKE` 6543, `CAPABILITY_RESULT` 6544, `MODULE_STATE` 6545), and the `CModule` / `CFacade_Base` helpers `setCapabilities`, `onInvoke`, `publishState`, `fireEvent`. Invokes run on a worker thread with a deadline and are idempotent by id.

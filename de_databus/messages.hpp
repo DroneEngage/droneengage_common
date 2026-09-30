@@ -922,6 +922,102 @@
  */
 #define TYPE_AndruavMessage_UNIT_CAPABILITIES                1089
 
+/**
+ * @brief Phase-4A fleet event envelope: a unit publishes a named,
+ *  run-scoped event to the fleet; the GCS may also fire one manually.
+ *  Delivery is at-least-once + dedupe (F3): senders retry until acked or
+ *  ttl expires (P4A-05); receivers dedupe on "id" and keep per-(src,run)
+ *  order via "seq".
+ * @direction DRONE_TO_DRONE (unit -> units, and to the GCS via _GD_);
+ *  also WEB_TO_MODULE for a manual GCS fire
+ * @rate ON_DEMAND - event-driven, plus ack-driven retries
+ * @discard NO - must be delivered; it is a discrete coordination event
+ * fields: v int REQUIRED (envelope version, 1); op/oh strings OPTIONAL
+ *  (operation id + sha256 hash, P4A-02); run string REQUIRED (operation
+ *  run id, F1); id string REQUIRED (uuid v4 dedupe key, F3); src string
+ *  REQUIRED (party id - checked against the routed "sd", F6); role
+ *  string OPTIONAL; seq int REQUIRED (per-(src,run) counter, starts 1);
+ *  t int OPTIONAL (fleet ms, CLOCK.md T2 - data only, never used for
+ *  expiry; 0 = none); age int REQUIRED (ms since the sender created the
+ *  event, sender monotonic, refreshed on every (re)send, T1); ttl int
+ *  REQUIRED (seconds); n string REQUIRED (event name); p object
+ *  OPTIONAL (payload); tgt string OPTIONAL (world-model target, P4A-08);
+ *  ack bool OPTIONAL (sender wants acks, P4A-05)
+ * @note permission-gated only when the sender is a GCS
+ *  (PERMISSION_ALLOW_GCS_WP_CONTROL); unit senders pass ungated.
+ *  Wire format is normative in
+ *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ */
+#define TYPE_AndruavMessage_DE_EVENT                     1090
+/**
+ * @brief Ack batch for DE_EVENT: a unit confirms received event ids back
+ *  to the event's src. Units only - a GCS-sent copy is dropped at the
+ *  receiving de_comm's permission gate (a GCS sender is detected via its
+ *  announced TYPE_AndruavMessage_ID "GS" flag in the party registry).
+ * @direction DRONE_TO_DRONE (unit -> the event's src party)
+ * @rate ON_DEMAND - batched up to 32 ids per message, flushed at least
+ *  every 200 ms (P4A-05)
+ * @discard NO - acks drive the sender's retry stop; must be delivered
+ * fields: v int REQUIRED; run string REQUIRED; ids array<string>
+ *  REQUIRED (<=32 event ids); from string REQUIRED (acking party id)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ */
+#define TYPE_AndruavMessage_DE_EVENT_ACK                 1091
+/**
+ * @brief Roster heartbeat: a unit's Phase-4A "who am I and what am I
+ *  doing" broadcast - operation/run binding, supervisor state, active
+ *  mission, battery, position, heading, armed/flying, capability and
+ *  world-model digests, current phase, and fleet-time quality.
+ * @direction DRONE_TO_DRONE + MODULE_TO_WEB (unit -> all, tg _GD_)
+ * @rate MEDIUM - periodic heartbeat (P4A-07 sets the cadence)
+ * @discard YES - latest_wins on the server (server.config
+ *  latest_wins_message_types); a newer roster fully supersedes older
+ *  ones. GCS-sent copies are dropped (units only).
+ * fields: v, op, oh, run, src, role, st, mis, mst, bat, pos
+ *  ([lat,lng,alt_rel_m]), hdg, fly, arm, cap (16-hex capability-set
+ *  hash), wm (16-hex world-model digest, P4A-08), ph (phase id,
+ *  P4A-11), t (fleet ms), tq (0 none | 1 holdover | 2 server-synced,
+ *  CLOCK.md T3), terr (ms) - see PROTOCOL.md
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ */
+#define TYPE_AndruavMessage_DE_ROSTER                    1092
+/**
+ * @brief World-model operator decisions: the GCS confirms / dismisses /
+ *  re-candidates targets. Only decisions travel - the target table
+ *  itself is NOT replicated; every unit recomputes it from the
+ *  detection events (P4A-08).
+ * @direction WEB_TO_MODULE (GCS -> units)
+ * @rate ON_DEMAND
+ * @discard NO - operator decisions must be delivered;
+ *  permission-gated (PERMISSION_ALLOW_GCS_WP_CONTROL)
+ * fields: v int REQUIRED; run string REQUIRED; ops array REQUIRED, each
+ *  {o:"state", tid:<target id>, st:"confirmed"|"dismissed"|"candidate",
+ *  t:<fleet ms>, by:<gcs party>}
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ */
+#define TYPE_AndruavMessage_DE_WORLD                     1093
+/**
+ * @brief Operation control for the two-phase fleet deploy (P4A-09):
+ *  GCS prepare/start/abort/status vs unit ready/fail/started replies.
+ * @direction BIDIRECTIONAL (GCS -> one unit for "prepare" carrying that
+ *  unit's package; units -> GCS for the replies)
+ * @rate ON_DEMAND
+ * @discard NO - deploy control must be delivered; permission-gated for
+ *  a GCS sender (PERMISSION_ALLOW_GCS_WP_CONTROL); unit senders pass
+ *  ungated
+ * fields: a string REQUIRED - GCS->unit: "prepare" (op, oh, run,
+ *  bind{party:role}, pkg, hash - pkg/hash as in 1085), "start" (run,
+ *  t_start, start_in_ms, start?, CLOCK.md T1/T4), "abort" (run, why),
+ *  "status" (run); unit->GCS: "ready" (run, hash), "fail" (run, why),
+ *  "started" (run)
+ * @note wire format is normative in
+ *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ */
+#define TYPE_AndruavMessage_DE_OP_CONTROL                1094
+
 //Binary Starts with 2000
 
 //deprecated telemetry technology
