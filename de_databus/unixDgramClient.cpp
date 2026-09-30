@@ -131,9 +131,13 @@ void CUnixDgramClient::stop() {
         m_threadSenderID.join();
     }
     
-    if (m_SocketFD >= 0) {
-        close(m_SocketFD);
-        m_SocketFD = -1;
+    {
+        // Under m_lock: sendMSG may still be called by other threads after stop.
+        std::lock_guard<std::mutex> lock(m_lock);
+        if (m_SocketFD >= 0) {
+            close(m_SocketFD);
+            m_SocketFD = -1;
+        }
     }
     
     // Remove socket file
@@ -149,12 +153,16 @@ void CUnixDgramClient::setJsonId(std::string jsonID) {
 }
 
 void CUnixDgramClient::sendMSG(const char* msg, const int length) {
+    if (m_stopped_called) return;
+
     if (m_chunkSize <= 0) {
         std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Invalid chunk size: " << m_chunkSize << _NORMAL_CONSOLE_TEXT_ << std::endl;
         return;
     }
 
     std::lock_guard<std::mutex> lock(m_lock);
+    // re-check under lock: stop() closes the socket under m_lock.
+    if (m_stopped_called || m_SocketFD < 0) return;
 
 #ifndef DE_DISABLE_TRY
     try {
@@ -163,7 +171,7 @@ void CUnixDgramClient::sendMSG(const char* msg, const int length) {
         int offset = 0;
         int chunk_number = 0;
 
-        while (remainingLength > 0) {
+        while (remainingLength > 0 && !m_stopped_called) {
             int chunkLength = std::min(m_chunkSize, remainingLength);
             remainingLength -= chunkLength;
 
@@ -187,7 +195,7 @@ void CUnixDgramClient::sendMSG(const char* msg, const int length) {
             if (sent < 0) {
                 // Retry on ENOENT (broker socket not yet created) with exponential backoff
                 if (errno == ENOENT && chunk_number == 0) {
-                    for (int retry = 0; retry < 5; ++retry) {
+                    for (int retry = 0; retry < 5 && !m_stopped_called; ++retry) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(100 * (1 << retry)));
                         sent = sendto(m_SocketFD, chunkMsg, chunkLength + 2 * sizeof(uint8_t),
                                       0, (const struct sockaddr*)m_BrokerAddress,

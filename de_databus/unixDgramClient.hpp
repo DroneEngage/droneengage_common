@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <sys/un.h>
 #include "udpClient.hpp"
 
@@ -50,7 +51,7 @@ class CUnixDgramClient {
 
     protected:
         bool m_started = false;
-        bool m_stopped_called = false;
+        std::atomic<bool> m_stopped_called{false};
         std::mutex m_lock;
         std::mutex m_lock2;
 

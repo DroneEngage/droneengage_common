@@ -86,14 +86,16 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
 
 bool de::comm::CModule::uninit ()
 {
-    m_health_thread_exit = true;
-    if (m_health_thread.joinable()) m_health_thread.join();
-
+    // Stop the transport first so any thread blocked in sendMSG (ENOENT
+    // backoff, chunk sends) aborts immediately instead of stalling joins.
     if (m_use_unix_socket) {
         cUnixDgramClient.stop();
     } else {
         cUDPClient.stop();
     }
+
+    m_health_thread_exit = true;
+    if (m_health_thread.joinable()) m_health_thread.join();
 
     return true;
 }

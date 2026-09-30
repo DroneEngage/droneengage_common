@@ -4,6 +4,7 @@
 
 #include <thread>         // std::thread
 #include <mutex>          // std::mutex, std::unique_lock
+#include <atomic>
 
 #ifndef MAXLINE
 #define MAXLINE 65507 
@@ -68,7 +69,7 @@ class CUDPClient
 
     protected:
         bool m_starrted = false;
-        bool m_stopped_called = false;
+        std::atomic<bool> m_stopped_called{false};
         std::mutex m_lock;  
         std::mutex m_lock2;  
  

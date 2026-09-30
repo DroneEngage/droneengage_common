@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -68,6 +69,16 @@ void de::comm::CUDPClient::init(const char *targetIP, int broadcatsPort, const c
     {
         std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Socket creation failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
         exit(EXIT_FAILURE);
+    }
+
+    // Periodic recv timeout so InternalReceiverEntry can observe
+    // m_stopped_called: shutdown() is a no-op on this unconnected UDP
+    // socket (ENOTCONN) and close() does not wake a blocked recvfrom().
+    {
+        struct timeval tv;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        setsockopt(m_SocketFD, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
     }
 
     m_ModuleAddress = new (struct sockaddr_in)();
@@ -152,12 +163,17 @@ void de::comm::CUDPClient::stop()
     try
     {
 #endif
-        if (m_SocketFD != -1)
         {
-            std::cout << _SUCCESS_CONSOLE_BOLD_TEXT_ << "Close UDP Socket" << _NORMAL_CONSOLE_TEXT_ << std::endl;
-            shutdown(m_SocketFD, SHUT_RDWR);
-            close(m_SocketFD);
-            m_SocketFD = -1;
+            // Under m_lock: sendMSG may still be called by other threads
+            // (scheduler, mavlink reader) after the databus is stopped.
+            std::lock_guard<std::mutex> lock(m_lock);
+            if (m_SocketFD != -1)
+            {
+                std::cout << _SUCCESS_CONSOLE_BOLD_TEXT_ << "Close UDP Socket" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                shutdown(m_SocketFD, SHUT_RDWR);
+                close(m_SocketFD);
+                m_SocketFD = -1;
+            }
         }
 
         if (m_starrted)
@@ -169,10 +185,13 @@ void de::comm::CUDPClient::stop()
             m_starrted = false;
         }
 
-        delete m_ModuleAddress;
-        delete m_CommunicatorModuleAddress;
-        m_ModuleAddress = nullptr;
-        m_CommunicatorModuleAddress = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(m_lock);
+            delete m_ModuleAddress;
+            delete m_CommunicatorModuleAddress;
+            m_ModuleAddress = nullptr;
+            m_CommunicatorModuleAddress = nullptr;
+        }
 
 #ifdef DEBUG
         std::cout << __FILE__ << "." << __FUNCTION__ << " line:" << __LINE__ << "  " << _LOG_CONSOLE_TEXT << "DEBUG: Stop completed" << _NORMAL_CONSOLE_TEXT_ << std::endl;
@@ -255,7 +274,10 @@ void de::comm::CUDPClient::InternalReceiverEntry()
             {
 // If socket was shutdown, break loop; otherwise continue
 #ifdef DEBUG
-                std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "recvfrom failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                if (errno != EAGAIN && errno != EWOULDBLOCK)
+                {
+                    std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "recvfrom failed: " << strerror(errno) << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                }
 #endif
                 if (m_stopped_called)
                     break;
@@ -308,6 +330,8 @@ void de::comm::CUDPClient::InternelSenderIDEntry()
 
 void de::comm::CUDPClient::sendMSG(const char *msg, const int length)
 {
+    if (m_stopped_called) return;
+
     if (m_chunkSize <= 0)
     {
         std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "Invalid chunk size: " << m_chunkSize << _NORMAL_CONSOLE_TEXT_ << std::endl;
@@ -315,6 +339,8 @@ void de::comm::CUDPClient::sendMSG(const char *msg, const int length)
     }
 
     std::lock_guard<std::mutex> lock(m_lock);
+    // re-check under lock: stop() closes the socket and frees addresses under m_lock.
+    if (m_stopped_called || m_SocketFD == -1 || m_CommunicatorModuleAddress == nullptr) return;
 
 #ifndef DE_DISABLE_TRY
     try
@@ -324,7 +350,7 @@ void de::comm::CUDPClient::sendMSG(const char *msg, const int length)
         int offset = 0;
         int chunk_number = 0;
 
-        while (remainingLength > 0)
+        while (remainingLength > 0 && !m_stopped_called)
         {
             int chunkLength = std::min(m_chunkSize, remainingLength);
             remainingLength -= chunkLength;
