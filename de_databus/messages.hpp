@@ -943,7 +943,7 @@
  *  REQUIRED (seconds); n string REQUIRED (event name); p object
  *  OPTIONAL (payload); tgt string OPTIONAL (world-model target, P4A-08);
  *  ack bool OPTIONAL (sender wants acks, P4A-05)
- * @note permission-gated only when the sender is a GCS
+ * @note permission-gated only when the sender is a GCS (manual fire)
  *  (PERMISSION_ALLOW_GCS_WP_CONTROL); unit senders pass ungated.
  *  Wire format is normative in
  *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
@@ -1005,9 +1005,9 @@
  * @direction BIDIRECTIONAL (GCS -> one unit for "prepare" carrying that
  *  unit's package; units -> GCS for the replies)
  * @rate ON_DEMAND
- * @discard NO - deploy control must be delivered; permission-gated for
- *  a GCS sender (PERMISSION_ALLOW_GCS_WP_CONTROL); unit senders pass
- *  ungated
+ * @discard NO - deploy control must be delivered; permission-gated
+ *  (PERMISSION_ALLOW_GCS_WP_CONTROL) for every sender - de_comm only
+ *  ever receives the GCS commands; unit replies go to the GCS
  * fields: a string REQUIRED - GCS->unit: "prepare" (op, oh, run,
  *  bind{party:role}, pkg, hash - pkg/hash as in 1085), "start" (run,
  *  t_start, start_in_ms, start?, CLOCK.md T1/T4), "abort" (run, why),
