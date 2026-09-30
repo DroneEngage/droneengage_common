@@ -4,6 +4,19 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.9.0] - 2026-09-30
+
+- Phase-3 capability layer (TASK-P3-01): `cap_schema` (de.cap/1 advert validation, param checks with defaults, list-of-types params such as `["string","int"]`, SHA-256 advert hash), capability message IDs (`MODULE_CAPABILITIES` 6542, `CAPABILITY_INVOKE` 6543, `CAPABILITY_RESULT` 6544, `MODULE_STATE` 6545), and the `CModule` / `CFacade_Base` helpers `setCapabilities`, `onInvoke`, `publishState`, `fireEvent`. Invokes run on a worker thread with a deadline and are idempotent by id.
+- Review fixes: min/max limits also apply to list-of-types params; an action's `deprecated_alias` resolves to its current name before the handler is called (`capCanonicalAction`).
+
+## [10.8.1] - 2026-09-29
+
+- The capability invoke handler receives the invoke id.
+
+## [10.8.0] - 2026-09-27
+
+- Release of the Phase-2 message IDs listed under 10.7.3 (TASK-P2-01).
+
 ## [10.7.3] - 2026-09-27
 
 - Added the Phase-2 mission-planner message IDs (TASK-P2-01): `DE_Package_Upload` (1085), `DE_Supervisor_Action` (1086), `DE_Supervisor_Status` (1087), `DE_Supervisor_Journal` (1088) for GCS↔unit traffic, and `NAV_ADAPTER_ACTION` (6540) / `NAV_ADAPTER_STATUS` (6541) for the de_comm↔de_mavlink nav adapter. Wire formats are normative in `Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md`. 6539 was already taken by `CAMERA_OVERLAY_ACTION`, so the nav adapter pair moved to 6540/6541.
