@@ -90,7 +90,9 @@ std::string get_time_string()
 
 uint64_t get_time_usec()
 {
-	static struct timeval _time_stamp;
+	// local, not static: a shared buffer races when two threads read the
+	// clock at once (the value is computed from it after the call)
+	struct timeval _time_stamp;
 	gettimeofday(&_time_stamp, NULL);
 	return _time_stamp.tv_sec*1000000 + _time_stamp.tv_usec;
 }
@@ -99,7 +101,8 @@ uint64_t get_time_usec()
 // backward on NTP/RTC corrections, which would underflow a uint64 diff.
 uint64_t get_time_usec_monotonic()
 {
-	static struct timespec _time_stamp;
+	// local, not static: thread-safe (see get_time_usec)
+	struct timespec _time_stamp;
 	clock_gettime(CLOCK_MONOTONIC, &_time_stamp);
 	return _time_stamp.tv_sec*1000000 + _time_stamp.tv_nsec/1000;
 }
