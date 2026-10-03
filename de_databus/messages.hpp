@@ -855,7 +855,7 @@
  *  (PERMISSION_ALLOW_GCS_WP_CONTROL, same as Upload_DE_Mission 1075)
  * fields: pkg string REQUIRED (canonical JSON of the Package, without hash);
  *  hash string REQUIRED ("sha256:<64 hex>"); e bool OPTIONAL (erase fences
- *  first, same meaning as 1075)
+ *  first, same meaning as 1075 - honored since P4A-12)
  * @note wire format is normative in
  *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
  */
@@ -886,7 +886,8 @@
  *  COMPLETED|STOPPED|FAULT); pkg_hash/op/role strings OPTIONAL; run string
  *  (run uuid, empty when not running); mis/mst (active mission id + state);
  *  step/seq (current manifest step + FC seq); stack array (preempted
- *  missions); err string (last fault text)
+ *  missions); err string (last fault text); fences int OPTIONAL (count of
+ *  DE fences installed by the last load/PREPARE, P4A-12)
  * @note wire format is normative in
  *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
  */
