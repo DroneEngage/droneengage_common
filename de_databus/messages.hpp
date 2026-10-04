@@ -1579,20 +1579,25 @@
  * fields: a int REQUIRED (CAMERA_OVERLAY_ACTION_* code);
  *  t string OPTIONAL (target camera unique_name or local_name; absent or
  *   empty = all cameras);
- *  i int REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE and
- *   CAMERA_OVERLAY_ACTION_MOVE_SHAPE (shape id);
- *  s object REQUIRED for CAMERA_OVERLAY_ACTION_SET_SHAPE:
- *   id int REQUIRED; type string REQUIRED ("line"|"rect"|"circle"|"text");
+ *  i int|array<int> REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE (shape
+ *   id, or batch of ids);
+ *  s object|array<object> REQUIRED for CAMERA_OVERLAY_ACTION_SET_SHAPE
+ *   (single shape or batch of shapes):
+ *   id int REQUIRED; type string REQUIRED ("line"|"rect"|"circle"|"text"|
+ *   "crosshair");
  *   x1,y1,x2,y2 double OPTIONAL 0..1 normalised (line endpoints / rect
- *   top-left+bottom-right / circle+text anchor);
- *   radius double OPTIONAL (circle only, fraction of frame height);
+ *   top-left+bottom-right / circle+crosshair+text anchor);
+ *   radius double OPTIONAL (circle: radius; crosshair: '+' arm half-length;
+ *   both a fraction of frame height so the shape stays symmetric);
  *   text_height double OPTIONAL (text only, glyph height as fraction of frame
  *   height); thickness int OPTIONAL (px, min 2); filled bool OPTIONAL
  *   (rect/circle); text string OPTIONAL (text only, ASCII);
  *   color array<int> OPTIONAL [r,g,b] or [r,g,b,a], 0..255
- *  x1,y1,x2,y2 double REQUIRED for CAMERA_OVERLAY_ACTION_MOVE_SHAPE
- *   (0..1 normalised; applied to the existing shape keeping its style;
- *   unknown id is ignored - resend SET_SHAPE to (re)create it)
+ *  CAMERA_OVERLAY_ACTION_MOVE_SHAPE - single record: i int + x1,y1,x2,y2
+ *   double REQUIRED at cmd level; batch form: m array of
+ *   {i,x1,y1,x2,y2} records (0..1 normalised; applied to the existing shape
+ *   keeping its style; unknown id is ignored - resend SET_SHAPE to
+ *   (re)create it)
  */
 #define TYPE_AndruavMessage_CAMERA_OVERLAY_ACTION               6539
 /**
