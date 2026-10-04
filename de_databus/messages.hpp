@@ -1605,12 +1605,18 @@
  * @discard NO - FC command path; every action is answered by a
  *  NAV_ADAPTER_STATUS "result"
  * fields: a string REQUIRED ("load"|"check"|"goto"|"hold"|"upload_start"|
- *  "guided"|"unload"); id int REQUIRED; hash string OPTIONAL (load/check:
- *  sha256 of the item set); items array OPTIONAL (load/check/upload_start:
- *  wire fc_items [{"c","ft","mv"}]); seq int OPTIONAL (goto); auto bool
- *  OPTIONAL (goto: switch to AUTO); start int OPTIONAL (upload_start);
- *  k string OPTIONAL (guided: "goto"|"orbit"); lat/lng/alt/r OPTIONAL
- *  (guided target/orbit radius)
+ *  "guided"|"unload"|"upload"|"preflight"|"arm"); id int REQUIRED;
+ *  hash string OPTIONAL (load/check: sha256 of the item set); items array
+ *  OPTIONAL (load/check/upload_start/upload: wire fc_items [{"c","ft","mv"}]);
+ *  seq int OPTIONAL (goto); auto bool OPTIONAL (goto: switch to AUTO);
+ *  start int OPTIONAL (upload_start); k string OPTIONAL (guided:
+ *  "goto"|"orbit"); lat/lng/alt/r OPTIONAL (guided target/orbit radius);
+ *  min_bat int OPTIONAL (preflight: battery floor, default 60);
+ *  arm bool OPTIONAL (arm: true only - no disarm path). P4B-09: "upload"
+ *  is the load-only write of the controlled launch (upload_start without
+ *  the AUTO step), "preflight" is the read-only ready-to-arm check and
+ *  "arm" is a plain NON-forced arm; all three only exist for the
+ *  approval-gated ground launch.
  * @note 6539 was already taken by CAMERA_OVERLAY_ACTION when this was added.
  *  Wire format is normative in
  *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
