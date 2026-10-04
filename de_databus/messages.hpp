@@ -857,7 +857,7 @@
  *  hash string REQUIRED ("sha256:<64 hex>"); e bool OPTIONAL (erase fences
  *  first, same meaning as 1075 - honored since P4A-12)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_DE_Package_Upload                  1085
 /**
@@ -873,7 +873,7 @@
  *  event string OPTIONAL (fire); payload object OPTIONAL (fire); from int
  *  OPTIONAL (journal: first line index)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_DE_Supervisor_Action               1086
 /**
@@ -889,7 +889,7 @@
  *  missions); err string (last fault text); fences int OPTIONAL (count of
  *  DE fences installed by the last load/PREPARE, P4A-12)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_DE_Supervisor_Status               1087
 /**
@@ -902,7 +902,7 @@
  * fields: run string (run uuid); from int (first line index); lines
  *  array<string>; more bool (true when further pages exist)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_DE_Supervisor_Journal              1088
 /**
@@ -919,7 +919,7 @@
  *  caps object OPTIONAL {ns: {ch, module, ver, advert-object} | null};
  *  state object OPTIONAL {ns: {key: value}}; request: r bool
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_UNIT_CAPABILITIES                1089
 
@@ -947,7 +947,7 @@
  * @note permission-gated only when the sender is a GCS (manual fire)
  *  (PERMISSION_ALLOW_GCS_WP_CONTROL); unit senders pass ungated.
  *  Wire format is normative in
- *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P4A-01)
  */
 #define TYPE_AndruavMessage_DE_EVENT                     1090
 /**
@@ -962,7 +962,7 @@
  * fields: v int REQUIRED; run string REQUIRED; ids array<string>
  *  REQUIRED (<=32 event ids); from string REQUIRED (acking party id)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P4A-01)
  */
 #define TYPE_AndruavMessage_DE_EVENT_ACK                 1091
 /**
@@ -981,7 +981,7 @@
  *  P4A-11), t (fleet ms), tq (0 none | 1 holdover | 2 server-synced,
  *  CLOCK.md T3), terr (ms) - see PROTOCOL.md
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P4A-01)
  */
 #define TYPE_AndruavMessage_DE_ROSTER                    1092
 /**
@@ -997,7 +997,7 @@
  *  {o:"state", tid:<target id>, st:"confirmed"|"dismissed"|"candidate",
  *  t:<fleet ms>, by:<gcs party>}
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P4A-01)
  */
 #define TYPE_AndruavMessage_DE_WORLD                     1093
 /**
@@ -1015,7 +1015,7 @@
  *  "status" (run); unit->GCS: "ready" (run, hash), "fail" (run, why),
  *  "started" (run)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-4A-Tasks/PROTOCOL.md (TASK-P4A-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P4A-01)
  */
 #define TYPE_AndruavMessage_DE_OP_CONTROL                1094
 
@@ -1619,7 +1619,7 @@
  *  approval-gated ground launch.
  * @note 6539 was already taken by CAMERA_OVERLAY_ACTION when this was added.
  *  Wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_NAV_ADAPTER_ACTION                 6540
 /**
@@ -1636,7 +1636,7 @@
  *  mission_mode); mode int + armed/flying bool OPTIONAL (mode); ver int
  *  (hello, sent on start and in reply to unknown actions)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-2-Tasks/PROTOCOL.md (TASK-P2-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P2-01)
  */
 #define TYPE_AndruavMessage_NAV_ADAPTER_STATUS                 6541
 /**
@@ -1653,7 +1653,7 @@
  * fields: caps array<string> + ch string (module->de_comm); request:
  *  r bool (de_comm->module)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_MODULE_CAPABILITIES              6542
 /**
@@ -1667,7 +1667,7 @@
  *  p object OPTIONAL (params); dl number OPTIONAL (deadline seconds,
  *  default 10)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_CAPABILITY_INVOKE                6543
 /**
@@ -1679,7 +1679,7 @@
  * fields: id string REQUIRED (echoed); ok bool REQUIRED; err string
  *  OPTIONAL (when !ok); data any OPTIONAL (action result)
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_CAPABILITY_RESULT                6544
 /**
@@ -1692,7 +1692,7 @@
  * fields: ns string REQUIRED; s object REQUIRED (key->value);
  *  full bool OPTIONAL
  * @note wire format is normative in
- *  Tasks/mission_planner/Phase-3-Tasks/PROTOCOL.md (TASK-P3-01)
+ *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_MODULE_STATE                     6545
 
