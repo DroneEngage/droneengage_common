@@ -491,6 +491,7 @@ bool de::comm::CModule::setCapabilities (const std::vector<std::string>& adverts
             return false;
         }
 
+#ifndef DE_DISABLE_TRY
         Json_de advert;
         try
         {
@@ -502,6 +503,15 @@ bool de::comm::CModule::setCapabilities (const std::vector<std::string>& adverts
                       << e.what() << _NORMAL_CONSOLE_TEXT_ << std::endl;
             return false;
         }
+#else
+        const Json_de advert = Json_de::parse(advert_str, nullptr, false);
+        if (advert.is_discarded())
+        {
+            std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << " setCapabilities: advert is not valid JSON"
+                      << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            return false;
+        }
+#endif
 
         std::string err;
         if (!capValidateAdvert(advert, err))
@@ -640,8 +650,10 @@ void de::comm::CModule::runInvokeOnWorker (const std::string& id, const std::str
             {
                 Json_de res = {{"ok", true}};
                 std::string err;
+#ifndef DE_DISABLE_TRY
                 try
                 {
+#endif
                     const Json_de data = handler(id, ns, act, params, err);
                     if (!err.empty())
                     {
@@ -652,12 +664,14 @@ void de::comm::CModule::runInvokeOnWorker (const std::string& id, const std::str
                     {
                         res["data"] = data;
                     }
+#ifndef DE_DISABLE_TRY
                 }
                 catch (const std::exception& e)
                 {
                     res["ok"]  = false;
                     res["err"] = std::string("handler exception: ") + e.what();
                 }
+#endif
                 return res;
             });
 
