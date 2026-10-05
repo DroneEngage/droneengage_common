@@ -53,7 +53,7 @@ namespace de
             bool setCapabilities(const std::vector<std::string> &adverts);
             void onInvoke(CapabilityInvokeHandler handler);
             void publishState(const std::string &ns, const Json_de &changed, const bool full = false);
-            void fireEvent(const std::string &ns, const std::string &ev, const Json_de &payload);
+            std::string fireEvent(const std::string &ns, const std::string &ev, const Json_de &payload);
 
         protected:
             CModule &m_module = de::comm::CModule::getInstance();

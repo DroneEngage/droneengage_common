@@ -265,8 +265,10 @@ typedef std::function<Json_de (const std::string& id,
              *  d="<ns>.<ev>", ed=payload, n=<fresh nonce>, no "sc" -
              *  intermodule only, so de_comm's acceptExternalEvent
              *  de-duplicates by sender|d|n and never drops it on scope.
+             * @return the nonce sent in "n" (callers that consume their own
+             *  namespace's events can use it to filter self-echoes)
              */
-            void fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload);
+            std::string fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload);
 
         private:
 

@@ -572,19 +572,22 @@ void de::comm::CModule::publishState (const std::string& ns, const Json_de& chan
 }
 
 
-void de::comm::CModule::fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload)
+std::string de::comm::CModule::fireEvent (const std::string& ns, const std::string& ev, const Json_de& payload)
 {
     const uint64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
+
+    const std::string nonce = std::to_string(ms) + "-" + std::to_string(++m_event_counter);
 
     Json_de msg =
     {
         {"d",  ns + "." + ev},
         {"ed", payload},
-        {"n",  std::to_string(ms) + "-" + std::to_string(++m_event_counter)}
+        {"n",  nonce}
     };
 
     sendJMSG("", msg, TYPE_AndruavMessage_Sync_EventFire, true);
+    return nonce;
 }
 
 

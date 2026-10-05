@@ -147,9 +147,9 @@ void CFacade_Base::publishState(const std::string& ns, const Json_de& changed, c
 
 /**
  * @brief Phase-3: fire "<ns>.<ev>" as a Sync_EventFire with payload in
- * "ed" and a fresh nonce in "n" (intermodule only).
+ * "ed" and a fresh nonce in "n" (intermodule only). Returns the nonce.
  */
-void CFacade_Base::fireEvent(const std::string& ns, const std::string& ev, const Json_de& payload)
+std::string CFacade_Base::fireEvent(const std::string& ns, const std::string& ev, const Json_de& payload)
 {
-    m_module.fireEvent(ns, ev, payload);
+    return m_module.fireEvent(ns, ev, payload);
 }
