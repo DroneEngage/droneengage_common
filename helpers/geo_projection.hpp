@@ -16,6 +16,11 @@
  * -x (behind). Use mount yaw_deg to re-align the image axes to a different
  * physical mounting.
  *
+ * Lens model: rectilinear (P5-18), optionally Brown-distorted via
+ * GeoCameraParams k1/k2 - see geoRayCamera. Note for integrators:
+ * detection ground positions move by up to ~2.5 % of altitude off-axis
+ * compared to the pre-P5-18 angle-linear model.
+ *
  * Shared by de_mavlink (live pose from the FC) and de_comm (fixed pose of
  * a static unit, TASK-SU-04). No dependencies beyond <cmath>/<array> so it
  * can be unit-tested standalone.
@@ -33,6 +38,11 @@ namespace geo
     {
         double hfov_deg = 62.2;
         double vfov_deg = 48.8;
+        /// optional Brown radial distortion applied to the ideal
+        /// rectilinear image coordinates (x_d = x (1 + k1 r^2 + k2 r^4),
+        /// r the rectilinear radius) - 0/0 = an undistorted lens
+        double k1 = 0.0;
+        double k2 = 0.0;
     };
 
     /// camera mount attitude relative to the body frame (deg).
@@ -82,13 +92,23 @@ namespace geo
         return normalized01 - 0.5;
     }
 
-    /// pinhole ray in camera frame (x right, y down, z forward)
+    /// pinhole ray in camera frame (x right, y down, z forward).
+    /// RECTILINEAR model (P5-18): the ray direction grows with
+    /// 2u tan(FOV/2) - what every real lens without distortion and every
+    /// renderer (a pinhole K-matrix, Three.js PerspectiveCamera) does.
+    /// The previous form, tan(u * FOV), was angle-linear: it agreed at
+    /// the centre and the exact frame edge but misplaced off-axis
+    /// detections by up to ~2.5 % of altitude. k1/k2 apply optional
+    /// Brown radial distortion on top of the ideal coordinates.
     inline GeoVec3 geoRayCamera (const double u, const double v,
                                  const GeoCameraParams& cam)
     {
-        return { std::tan(u * geoDeg2Rad(cam.hfov_deg)),
-                 std::tan(v * geoDeg2Rad(cam.vfov_deg)),
-                 1.0 };
+        const double x = 2.0 * u * std::tan(0.5 * geoDeg2Rad(cam.hfov_deg));
+        const double y = 2.0 * v * std::tan(0.5 * geoDeg2Rad(cam.vfov_deg));
+        if (cam.k1 == 0.0 && cam.k2 == 0.0) return { x, y, 1.0 };
+        const double r2 = x * x + y * y;
+        const double d = 1.0 + cam.k1 * r2 + cam.k2 * r2 * r2;
+        return { x * d, y * d, 1.0 };
     }
 
     inline void geoRot (const double r, const double p, const double y,
@@ -205,9 +225,19 @@ namespace geo
         // 1-sigma contributors (meters)
         const double s_alt = sigma_alt_m / rd;                    // alt error * slant factor
         const double s_att = geoDeg2Rad(sigma_att_deg) * slant_m; // attitude error at slant range
-        const double s_box = 0.5 * slant_m * std::max(
-            std::fabs(box_w) * geoDeg2Rad(cam.hfov_deg),
-            std::fabs(box_h) * geoDeg2Rad(cam.vfov_deg));          // half box on the ground
+        // rectilinear angular size of the half box at ITS position
+        // (P5-18 D2): the angular width the box subtends, measured on
+        // the rectilinear radius coordinate - off-axis it differs from
+        // the angle-linear box_w * FOV approximation
+        const double tan_hf = std::tan(0.5 * geoDeg2Rad(cam.hfov_deg));
+        const double tan_vf = std::tan(0.5 * geoDeg2Rad(cam.vfov_deg));
+        const double ang_w = std::fabs(
+            std::atan(2.0 * (u + box_w * 0.5) * tan_hf)
+          - std::atan(2.0 * (u - box_w * 0.5) * tan_hf));
+        const double ang_h = std::fabs(
+            std::atan(2.0 * (v + box_h * 0.5) * tan_vf)
+          - std::atan(2.0 * (v - box_h * 0.5) * tan_vf));
+        const double s_box = 0.5 * slant_m * std::max(ang_w, ang_h);  // half box on the ground
         res.unc_m = 2.0 * std::sqrt(s_alt * s_alt + s_att * s_att + s_box * s_box);
 
         res.ok = true;
