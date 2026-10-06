@@ -384,7 +384,7 @@
 /**
  * @brief "Circle here" - intended to fly a loiter circle around a point.
  * @direction WEB_TO_MODULE (intended) - DEAD on the receiving side: webclient
- *  sends it (API_do_CircleHere) but drone_engage_mavlink has NO case for it
+ *  sends it (API_do_CircleHere) but droneengage_mavlink has NO case for it
  *  in fcb_andruav_message_parser.cpp's parseCommand switch, despite being
  *  subscribed in main.cpp's MESSAGE_FILTER. Currently a no-op end-to-end.
  * @rate ON_DEMAND (intended)
@@ -404,7 +404,7 @@
 /**
  * @brief DEAD as a JSON message today - roll/pitch/yaw/nav-error info.
  * The webclient still has a parser for it (legacy/mobile-client compat),
- * but drone_engage_mavlink sends the equivalent data (ATTITUDE/
+ * but droneengage_mavlink sends the equivalent data (ATTITUDE/
  * NAV_CONTROLLER_OUTPUT/VFR_HUD) packed as raw MAVLink under
  * TYPE_AndruavMessage_MAVLINK instead (every ~500ms).
  * @direction DEAD/UNUSED (as this JSON type)
@@ -426,7 +426,7 @@
 #define TYPE_AndruavMessage_DistinationLocation     1037
 /**
  * @brief DEAD/UNUSED - defined in messages.hpp (and duplicated in
- * drone_engage_communication_pro's copy) but no construction or parsing
+ * droneengage_communication_pro's copy) but no construction or parsing
  * code found anywhere in the repo (C++ or JS).
  * @direction DEAD/UNUSED
  */
@@ -473,7 +473,7 @@
  * @direction MODULE_TO_MODULE - sent internal_message=true from de_tracker
  *  to de_mavlink (CDEPilotTracking); NOT normally relayed to the web
  *  client (the broker's default routing only force-broadcasts
- *  TrackingTarget_STATUS, not this one). IR/drone_engage_IR_camera reuses
+ *  TrackingTarget_STATUS, not this one). IR/droneengage_IR_camera reuses
  *  this same ID for unrelated hot/cold thermal point reporting.
  * @rate REALTIME - de_tracker emits every 15 processed frames (~2Hz at
  *  30fps target); IR camera module emits every ~3 frames (~10Hz)
@@ -524,7 +524,7 @@
 #define TYPE_AndruavMessage_SET_HOME_LOCATION        1048
 /**
  * @brief DEAD on the module side - webclient sends it (API_CONST_RemoteCommand_zoomCamera)
- * but drone_engage_camera_2025 does not subscribe to it in MESSAGE_FILTER
+ * but droneengage_camera_2025 does not subscribe to it in MESSAGE_FILTER
  * and has no parser case for it.
  * @direction WEB_TO_MODULE (intended) - DEAD/UNUSED end-to-end today
  * fields (as sent): u string REQUIRED (camera unique name); a bool
@@ -534,7 +534,7 @@
 #define TYPE_AndruavMessage_CameraZoom               1049
 /**
  * @brief DEAD on the module side - webclient sends it (API_SwitchCamera) but
- * drone_engage_camera_2025 has no handler for it. Actual camera switching
+ * droneengage_camera_2025 has no handler for it. Actual camera switching
  * in the UI goes through RemoteCommand_SWITCHCAM(114) via RemoteExecute
  * instead (also effectively dead - see that constant below).
  * @direction WEB_TO_MODULE (intended) - DEAD/UNUSED end-to-end today
@@ -543,7 +543,7 @@
 #define TYPE_AndruavMessage_CameraSwitch             1050
 /**
  * @brief DEAD on the module side - webclient sends it (API_TurnMobileFlash,
- * likely for legacy/mobile Andruav app support) but drone_engage_camera_2025
+ * likely for legacy/mobile Andruav app support) but droneengage_camera_2025
  * has no handler for it.
  * @direction WEB_TO_MODULE (intended) - DEAD/UNUSED on this C++ module today
  * fields (as sent): f bool REQUIRED (flash on/off); u string REQUIRED (camera unique name)
@@ -686,7 +686,7 @@
  * o:  int - optimization_level
  * en: bool - enabled
  * z: bool - paused
- * @direction MODULE_TO_WEB - implemented in drone_engage_mavlink (NOT
+ * @direction MODULE_TO_WEB - implemented in droneengage_mavlink (NOT
  *  camera_2025/communication_pro, despite the doc's original placement here)
  * @rate ON_DEMAND - sent in reply to an explicit request or after a
  *  pause/resume telemetry-rate change, not periodic
@@ -766,7 +766,7 @@
  * @discard YES - latest bounding box supersedes older ones, ideal candidate to drop under congestion
  * fields: b object REQUIRED - {x,y,w,h} normalized best-object box, conf
  *  float OPTIONAL (defaults 1.0); t array DEBUG-ONLY - full detection list,
- *  wrapped in #ifdef DEBUG in drone_engage_yolo_ai ("too much traffic"),
+ *  wrapped in #ifdef DEBUG in droneengage_yolo_ai ("too much traffic"),
  *  never sent in release builds
  */
 #define TYPE_AndruavMessage_AI_Recognition_TargetLocation       1078
@@ -811,7 +811,7 @@
 #define TYPE_AndruavMessage_DEPilot_Control                    1081
 /**
  * @brief Viewlink telemetry stream (gimbal angles, target/vehicle coords, LRF distance, AI targets).
- * @direction MODULE_TO_WEB - drone_engage_viewlink_module (Python)
+ * @direction MODULE_TO_WEB - droneengage_viewlink_module (Python)
  * @rate HIGH/REALTIME - internally rate-limited to min ~100ms (10Hz) between sends
  * @discard YES - latest telemetry snapshot supersedes older ones
  * fields: a int REQUIRED (always VIEWLINK_STATUS_TELEMETRY=4); angles
@@ -819,7 +819,7 @@
  *  {lat,lon,alt,timestamp,source} OPTIONAL; lrf_distance float OPTIONAL;
  *  ai_targets array OPTIONAL
  * @note this id was reassigned from 1081 to 1083 (2026) to resolve a
- *  collision: drone_engage_viewlink_module's vendored messages.py had
+ *  collision: droneengage_viewlink_module's vendored messages.py had
  *  independently defined this same telemetry message at 1081, the same
  *  numeric id as TYPE_AndruavMessage_DEPilot_Control above. 1082 is
  *  already taken by the webclient's TYPE_AndruavMessage_Chat, so 1083 was
@@ -1024,7 +1024,7 @@
 //deprecated telemetry technology
 /**
  * @brief DEPRECATED/DEAD - no sender found anywhere; the receiver
- * (drone_engage_mavlink) parses the embedded raw mavlink stream but
+ * (droneengage_mavlink) parses the embedded raw mavlink stream but
  * discards the result (sendNative call is commented out). Superseded by
  * TYPE_AndruavMessage_MAVLINK + UDP proxy for telemetry.
  * @direction DEAD/UNUSED
@@ -1304,7 +1304,7 @@
  * @rate ON_DEMAND
  * @discard NO
  * fields: u string REQUIRED (local server URL/IP); p string REQUIRED (local server port)
- * @bug drone_engage_communication_pro's handler validates/parses u and p
+ * @bug droneengage_communication_pro's handler validates/parses u and p
  *  from the incoming command but then calls
  *  reconnectToCommServer("192.168.1.144", "9967", "my_key") with hardcoded
  *  literals instead of the parsed values - the received u/p are discarded.
@@ -1504,8 +1504,8 @@
  * already carried by the surrounding sendJMSG() envelope.
  *
  * @direction MODULE_TO_WEB
- * @rate LOW - interval varies per caller: drone_engage_communication_pro
- *  ~15s (every 150 ticks of its 10Hz loop), drone_engage_rpi_gpio ~30s
+ * @rate LOW - interval varies per caller: droneengage_communication_pro
+ *  ~15s (every 150 ticks of its 10Hz loop), droneengage_rpi_gpio ~30s
  *  (explicit MEMORY_STATUS_INTERVAL_SEC=30). NOTE: modules that vendor
  *  de_module_health.hpp (sdr, telnet, tracking, camera_2025, mavlink) do
  *  NOT currently call sendMemoryStatus() at all - no health data flows
@@ -1870,7 +1870,7 @@
 // All of these are sub-command ids carried in the "C" field of a
 // TYPE_AndruavMessage_RemoteExecute (1005) envelope. @direction WEB_TO_MODULE,
 // @rate ON_DEMAND, @discard NO for all of them (one-shot commands), unless noted otherwise.
-#define RemoteCommand_GET_WAY_POINTS                           500 // get from andruav not FCB but you can still read from fcb and refresh all   ; DEAD - no receiving `case` in drone_engage_mavlink today
+#define RemoteCommand_GET_WAY_POINTS                           500 // get from andruav not FCB but you can still read from fcb and refresh all   ; DEAD - no receiving `case` in droneengage_mavlink today
 #define RemoteCommand_RELOAD_WAY_POINTS_FROM_FCB               501
 #define RemoteCommand_CLEAR_WAY_POINTS                         502 // permission-gated: PERMISSION_ALLOW_GCS_WP_CONTROL
 #define RemoteCommand_CLEAR_FENCE_DATA 	                     503 // andruav fence; fn OPTIONAL fence name, absent = clear all; permission-gated: PERMISSION_ALLOW_GCS_WP_CONTROL
@@ -1909,7 +1909,7 @@
 #define EXTERNAL_CAMERA_SUPPORT_DUAL_CAM                    0x10
 #define EXTERNAL_CAMERA_SUPPORT_FLASHING                    0x20
 // Sent inside TYPE_AndruavMessage_CameraList's per-camera "p" (type) and "s"
-// (capability bitmask) fields. Built in drone_engage_camera_2025's
+// (capability bitmask) fields. Built in droneengage_camera_2025's
 // getDeviceListAsJSON(); zoom/dual-cam/flashing bits are defined but never
 // actually set by that module today (see CameraZoom/CameraSwitch/CameraFlash
 // being dead above - the capability flags exist ahead of the features).
