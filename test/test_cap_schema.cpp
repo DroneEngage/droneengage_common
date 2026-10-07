@@ -429,6 +429,38 @@ bool test_match_event_pattern ()
 }
 
 
+/* ------------------------------------------------------------------ *
+ *  TASK-PF-01 — the per-action "claim" flag                            *
+ * ------------------------------------------------------------------ */
+
+bool test_action_claim ()
+{
+    std::cout << "Testing: action 'claim' validation (PF-01)..." << std::endl;
+
+    std::string err;
+    Json_de a = Json::parse(PF02_ADVERT);
+
+    // both spellings accepted
+    a["actions"]["write"]["claim"] = "ns";
+    a["actions"]["read"]["claim"] = "action";
+    ASSERT_TRUE(de::comm::capValidateAdvert(a, err));
+
+    // a bad value rejects
+    a["actions"]["read"]["claim"] = "pin";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a["actions"]["read"]["claim"] = 1;
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a["actions"]["read"]["claim"] = true;
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+
+    // an old advert (no claim anywhere) is unchanged
+    ASSERT_TRUE(de::comm::capValidateAdvert(Json::parse(VALID_ADVERT), err));
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
 int main ()
 {
     bool ok = true;
@@ -442,6 +474,7 @@ int main ()
     ok &= test_type_list_limits_and_alias();
     ok &= test_event_patterns_valid();
     ok &= test_match_event_pattern();
+    ok &= test_action_claim();
 
     if (ok)
     {

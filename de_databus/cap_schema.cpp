@@ -275,6 +275,17 @@ bool de::comm::capValidateAdvert (const Json_de& advert, std::string& err)
                 err = path + ": 'deprecated_alias' must be a string";
                 return false;
             }
+            // TASK-PF-01: "claim" narrows a sensor-lane claim from the
+            // whole namespace to this action only ("action"); absent or
+            // "ns" keeps the namespace-wide behaviour
+            if (act.contains("claim")
+                && !(act["claim"].is_string()
+                     && (act["claim"].get<std::string>() == "ns"
+                         || act["claim"].get<std::string>() == "action")))
+            {
+                err = path + ": 'claim' must be \"ns\" or \"action\"";
+                return false;
+            }
             if (act.contains("params")
                 && !capValidateParamMap(act["params"], path + ".params", err))
                 return false;
