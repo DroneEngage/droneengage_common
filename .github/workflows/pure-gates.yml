@@ -16,10 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: toolchain
-        run: sudo apt-get update && sudo apt-get install -y \
-            build-essential
-
+      # no toolchain step: g++/make are preinstalled on ubuntu-latest,
+      # and apt-get on the runner proved flaky (exit 100)
       # -B forces a full rebuild: the repo carries committed .o/binary
       # artifacts that may be foreign-arch (e.g. built on the Pi host)
       - name: build + run all suites
