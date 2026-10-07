@@ -765,9 +765,13 @@
  *  (no explicit throttle; bound only by camera FPS / inference throughput)
  * @discard YES - latest bounding box supersedes older ones, ideal candidate to drop under congestion
  * fields: b object REQUIRED - {x,y,w,h} normalized best-object box, conf
- *  float OPTIONAL (defaults 1.0); t array DEBUG-ONLY - full detection list,
- *  wrapped in #ifdef DEBUG in droneengage_yolo_ai ("too much traffic"),
- *  never sent in release builds
+ *  float OPTIONAL (defaults 1.0; "confidence" accepted as an alias);
+ *  class_id int + class_name string OPTIONAL (TASK-B4-01: the detector's
+ *  own class - consumers fall back to the 1076-selected class when both
+ *  are absent, so legacy geometry-only boxes keep working); tm int
+ *  OPTIONAL (monotonic us for pose alignment); t array DEBUG-ONLY - full
+ *  detection list, wrapped in #ifdef DEBUG in droneengage_yolo_ai
+ *  ("too much traffic"), never sent in release builds
  */
 #define TYPE_AndruavMessage_AI_Recognition_TargetLocation       1078
 
