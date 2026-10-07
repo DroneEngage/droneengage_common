@@ -13,7 +13,17 @@
  *   { "schema": "de.cap/1", "ns": "camera", "module": "...", "ver": "...",
  *     "actions": { "capture": {"desc", "params": {name: param}, "timeout_s"} },
  *     "events":  { "captured": {"payload": {name: param}} },
- *     "state":   { "recording": param } }
+ *     "state":   { "recording": param },
+ *     "resources":      { "led": "out", "btn": "in" },
+ *     "event_patterns": { "*.went_on": {"kind": "fact",
+ *                                       "res": ["out"], "payload": {...}} } }
+ *
+ *   resources/event_patterns (TASK-PF-02) describe dynamic per-resource
+ *   names "<ns>.<key>.<verb>" that the dot-less "events"/"actions" maps
+ *   cannot express: "resources" names the surfaces ({key: class}, both
+ *   cap names) and "event_patterns" declares "*.<verb>" entries with an
+ *   optional "kind" ("fact" default, or "command"), a "res" class
+ *   whitelist (absent = all) and a "payload" param-map.
  *
  *   param := { "type": "bool"|"int"|"number"|"string"|"enum"|"geo"|
  *                     "array"|"object" | [scalar-type, ...],
@@ -88,6 +98,21 @@ const Json_de* capFindAction (const Json_de& advert, const std::string& act);
  * Handlers are always called with this name.
  */
 std::string capCanonicalAction (const Json_de& advert, const std::string& act);
+
+/**
+ * @brief match a dynamic per-resource name against the advert's
+ * "event_patterns" + "resources" (TASK-PF-02). A name
+ * "<ns>.<key>.<verb>" matches when the advert has a "*.<verb>" pattern
+ * of the given `kind` ("fact" or "command") and - when "resources" is
+ * present - it lists `key` with a class allowed by the pattern's "res"
+ * (absent "res" = every class; absent "resources" = key unchecked).
+ * Pure: no validation; the caller validates the advert first.
+ * @return pointer into advert (the pattern object), or nullptr.
+ */
+const Json_de* capMatchEventPattern (const Json_de& advert,
+                                     const std::string& key,
+                                     const std::string& verb,
+                                     const std::string& kind);
 
 } // namespace comm
 } // namespace de

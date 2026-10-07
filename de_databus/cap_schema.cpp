@@ -313,7 +313,146 @@ bool de::comm::capValidateAdvert (const Json_de& advert, std::string& err)
         && !capValidateParamMap(advert["state"], "state", err))
         return false;
 
+    // TASK-PF-02: the event surfaces of dynamic per-resource names
+    // "<ns>.<key>.<verb>". Both keys are additive: pre-PF-02 validators
+    // ignore unknown top-level keys, so a PF-02 advert still validates
+    // (and is forwarded verbatim) by an old de_comm.
+
+    if (advert.contains("resources"))
+    {
+        const Json_de& resources = advert["resources"];
+        if (!resources.is_object())
+        {
+            err = "'resources' must be an object";
+            return false;
+        }
+        for (auto it = resources.begin(); it != resources.end(); ++it)
+        {
+            if (!capIsValidName(it.key()))
+            {
+                err = "resources: bad resource name '" + it.key() + "'";
+                return false;
+            }
+            if (!it.value().is_string()
+                || !capIsValidName(it.value().get<std::string>()))
+            {
+                err = "resources." + it.key() + ": bad class name";
+                return false;
+            }
+        }
+    }
+
+    if (advert.contains("event_patterns"))
+    {
+        const Json_de& patterns = advert["event_patterns"];
+        if (!patterns.is_object())
+        {
+            err = "'event_patterns' must be an object";
+            return false;
+        }
+        for (auto it = patterns.begin(); it != patterns.end(); ++it)
+        {
+            const std::string path = "event_patterns." + it.key();
+            // keys are exactly "*.<verb>" with <verb> a cap name
+            const std::string& key = it.key();
+            if (key.size() < 3 || key[0] != '*' || key[1] != '.'
+                || !capIsValidName(key.substr(2)))
+            {
+                err = path + ": pattern keys must be '*.<verb>'";
+                return false;
+            }
+            const Json_de& pat = it.value();
+            if (!pat.is_object())
+            {
+                err = path + " must be an object";
+                return false;
+            }
+            if (pat.contains("kind"))
+            {
+                const Json_de& kind = pat["kind"];
+                if (!kind.is_string()
+                    || (kind.get<std::string>() != "fact"
+                        && kind.get<std::string>() != "command"))
+                {
+                    err = path + ": 'kind' must be 'fact' or 'command'";
+                    return false;
+                }
+            }
+            if (pat.contains("res"))
+            {
+                const Json_de& res = pat["res"];
+                if (!res.is_array())
+                {
+                    err = path + ": 'res' must be an array";
+                    return false;
+                }
+                for (const Json_de& cls : res)
+                {
+                    if (!cls.is_string()
+                        || !capIsValidName(cls.get<std::string>()))
+                    {
+                        err = path + ": 'res' entries must be class names";
+                        return false;
+                    }
+                }
+            }
+            if (pat.contains("desc") && !pat["desc"].is_string())
+            {
+                err = path + ": 'desc' must be a string";
+                return false;
+            }
+            if (pat.contains("payload")
+                && !capValidateParamMap(pat["payload"], path + ".payload", err))
+                return false;
+        }
+    }
+
     return true;
+}
+
+
+const Json_de* de::comm::capMatchEventPattern (const Json_de& advert,
+                                             const std::string& key,
+                                             const std::string& verb,
+                                             const std::string& kind)
+{
+    if (!advert.is_object()) return nullptr;
+    const Json_de* patterns = nullptr;
+    if (advert.contains("event_patterns")
+        && advert["event_patterns"].is_object())
+        patterns = &advert["event_patterns"];
+    if (patterns == nullptr || !patterns->contains("*." + verb))
+        return nullptr;
+    const Json_de& pat = (*patterns)["*." + verb];
+    if (!pat.is_object()) return nullptr;
+
+    if (pat.value("kind", "fact") != kind) return nullptr;
+
+    // the resource check applies only when the advert lists resources:
+    // without it the key cannot be class-checked and the pattern wins
+    if (advert.contains("resources"))
+    {
+        const Json_de& resources = advert["resources"];
+        if (!resources.is_object()) return nullptr;
+        if (!resources.contains(key) || !resources[key].is_string())
+            return nullptr;
+        const std::string cls = resources[key].get<std::string>();
+        if (pat.contains("res") && pat["res"].is_array())
+        {
+            bool allowed = false;
+            for (const Json_de& c : pat["res"])
+            {
+                if (c.is_string() && c.get<std::string>() == cls)
+                {
+                    allowed = true;
+                    break;
+                }
+            }
+            if (!allowed) return nullptr;
+        }
+    }
+
+    return &pat;
 }
 
 

@@ -273,6 +273,162 @@ bool test_type_list_limits_and_alias ()
 }
 
 
+/* ------------------------------------------------------------------ *
+ *  TASK-PF-02 — resources + event_patterns + capMatchEventPattern      *
+ * ------------------------------------------------------------------ */
+
+static const char* PF02_ADVERT = R"json(
+{ "schema": "de.cap/1",
+  "ns": "gpio",
+  "module": "droneengage_rpi_gpio", "ver": "1.4.1",
+  "actions": {
+    "write": { "params": { "pin": {"type":["string","int"]}, "value": {"type":"int","min":0} } },
+    "read":  { "params": { "pin": {"type":["string","int"]} } }
+  },
+  "resources": {
+    "led":   "out",
+    "servo": "pwm",
+    "btn":   "in"
+  },
+  "event_patterns": {
+    "*.went_on":  { "kind": "fact",    "payload": { "v": {"type":"int"}, "src": {"type":"string"} } },
+    "*.went_off": { "kind": "fact",    "payload": { "v": {"type":"int"}, "src": {"type":"string"} } },
+    "*.changed":  { "kind": "fact",    "res": ["pwm"], "payload": { "v": {"type":"int"}, "src": {"type":"string"} } },
+    "*.on":       { "kind": "command", "res": ["out","pwm"] },
+    "*.off":      { "kind": "command", "res": ["out","pwm"] },
+    "*.pulse":    { "kind": "command", "res": ["out"],
+                    "payload": { "ms": {"type":"int","optional":true,"min":1,"max":4000} } },
+    "*.set":      { "kind": "command", "res": ["pwm"],
+                    "payload": { "v": {"type":"int","min":0,"max":1024} } }
+  },
+  "state": { "led": {"type":"int"}, "servo": {"type":"int"}, "btn": {"type":"int"} }
+})json";
+
+
+bool test_event_patterns_valid ()
+{
+    std::cout << "Testing: resources + event_patterns validation (PF-02)..." << std::endl;
+
+    std::string err;
+    const Json_de advert = Json::parse(PF02_ADVERT);
+    ASSERT_TRUE(de::comm::capValidateAdvert(advert, err));
+
+    // advert carrying ONLY the new keys (no actions/events/state)
+    const Json_de only_new = Json::parse(
+        R"({"schema":"de.cap/1","ns":"gpio","module":"m","ver":"1",
+            "resources":{"led":"out"},
+            "event_patterns":{"*.went_on":{"kind":"fact"}}})");
+    ASSERT_TRUE(de::comm::capValidateAdvert(only_new, err));
+
+    // a pre-PF-02 advert is untouched by the new checks
+    ASSERT_TRUE(de::comm::capValidateAdvert(Json::parse(VALID_ADVERT), err));
+
+    // resources: must be an object of name -> name
+    Json_de a = advert;
+    a["resources"] = Json::array({"led"});
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["resources"]["Bad Key"] = "out";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["resources"]["led"] = 7;
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["resources"]["led"] = "Out";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+
+    // event_patterns: keys are exactly "*.<verb>"
+    a = advert; a["event_patterns"]["went_on"] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.*.*"] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.Went_on"] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*." + std::string(33, 'a')] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"] = Json::array({"*.went_on"});
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.x"] = "fact";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+
+    // kind / res / payload / desc shapes
+    a = advert; a["event_patterns"]["*.on"]["kind"] = "query";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.on"]["kind"] = 3;
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.on"]["res"] = "out";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.on"]["res"] = {"Out"};
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.on"]["res"] = {3};
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.went_on"]["desc"] = 1;
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["event_patterns"]["*.pulse"]["payload"]["ms"]["type"] = "frobnicate";
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+
+    // the pre-PF-02 fake: a dotted/wildcard key inside "events" stays
+    // rejected - this is why the keys had to be top-level
+    a = advert; a["events"]["*.went_on"] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+    a = advert; a["events"]["led.went_on"] = Json::object();
+    ASSERT_FALSE(de::comm::capValidateAdvert(a, err));
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
+bool test_match_event_pattern ()
+{
+    std::cout << "Testing: capMatchEventPattern..." << std::endl;
+
+    const Json_de advert = Json::parse(PF02_ADVERT);
+    using de::comm::capMatchEventPattern;
+
+    // facts
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "went_on", "fact") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "btn", "went_on", "fact") != nullptr);
+    // "res" class whitelist: changed is pwm-only
+    ASSERT_TRUE(capMatchEventPattern(advert, "servo", "changed", "fact") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "changed", "fact") == nullptr);
+    // commands
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "on", "command") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "servo", "set", "command") != nullptr);
+    // an input resource takes no commands
+    ASSERT_TRUE(capMatchEventPattern(advert, "btn", "on", "command") == nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "btn", "pulse", "command") == nullptr);
+    // wrong kind: "on" is a command, not a fact
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "on", "fact") == nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "went_on", "command") == nullptr);
+    // unknown verb / unknown resource key
+    ASSERT_TRUE(capMatchEventPattern(advert, "led", "went_onn", "fact") == nullptr);
+    ASSERT_TRUE(capMatchEventPattern(advert, "nosuch", "went_on", "fact") == nullptr);
+    // kind defaults to "fact" when the pattern omits it
+    Json_de a = advert;
+    a["event_patterns"]["*.flipped"] = Json::object();
+    ASSERT_TRUE(capMatchEventPattern(a, "led", "flipped", "fact") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(a, "led", "flipped", "command") == nullptr);
+    // the returned pattern is the advert's object (payload readable)
+    const Json_de* pat = capMatchEventPattern(advert, "led", "pulse", "command");
+    ASSERT_TRUE(pat != nullptr);
+    ASSERT_TRUE((*pat)["payload"]["ms"]["max"] == 4000);
+    // no event_patterns / no resources at all -> nothing matches,
+    // and an unresourced advert matches any key
+    ASSERT_TRUE(capMatchEventPattern(Json::parse(VALID_ADVERT), "led", "went_on", "fact") == nullptr);
+    a = advert;
+    a.erase("resources");
+    ASSERT_TRUE(capMatchEventPattern(a, "anykey", "went_on", "fact") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(a, "anykey", "on", "command") != nullptr);
+    ASSERT_TRUE(capMatchEventPattern(a, "anykey", "set", "command") != nullptr);  // res w/o resources: unchecked
+    // defensive: malformed members -> no match, never a crash
+    a = advert; a["event_patterns"] = 5;
+    ASSERT_TRUE(capMatchEventPattern(a, "led", "went_on", "fact") == nullptr);
+    a = advert; a["resources"] = 5;
+    ASSERT_TRUE(capMatchEventPattern(a, "led", "went_on", "fact") == nullptr);
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
 int main ()
 {
     bool ok = true;
@@ -284,6 +440,8 @@ int main ()
     ok &= test_check_params();
     ok &= test_message_ids();
     ok &= test_type_list_limits_and_alias();
+    ok &= test_event_patterns_valid();
+    ok &= test_match_event_pattern();
 
     if (ok)
     {
