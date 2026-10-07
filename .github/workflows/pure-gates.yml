@@ -20,6 +20,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y \
             build-essential
 
+      # -B forces a full rebuild: the repo carries committed .o/binary
+      # artifacts that may be foreign-arch (e.g. built on the Pi host)
       - name: build + run all suites
         working-directory: test
-        run: make test
+        run: make -B test
