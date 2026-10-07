@@ -1,0 +1,25 @@
+# pure-gates - every push, pure logic only.
+#
+#   tests    test/Makefile standalone suites (env flag, cap schema,
+#            ai box) - `make test` builds every target and executes
+#            the binaries. Pure logic: the vendored-into-modules
+#            sources are exercised here, so a de_common regression is
+#            caught before it propagates to each module's src/de_common.
+#
+# No hardware, no SITL, no sim bring-up.
+name: pure-gates
+on: [push, pull_request]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: toolchain
+        run: sudo apt-get update && sudo apt-get install -y \
+            build-essential
+
+      - name: build + run all suites
+        working-directory: test
+        run: make test
