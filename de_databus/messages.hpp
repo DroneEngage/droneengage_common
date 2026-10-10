@@ -334,8 +334,13 @@
  * @discard NO - each chunk is required for reassembly; losing ONE chunk
  *  corrupts the whole waypoint list (no per-chunk retransmission exists)
  * fields: n int REQUIRED (item count in this chunk); i int REQUIRED
- *  (WAYPOINT_CHUNK / WAYPOINT_LAST_CHUNK / WAYPOINT_NO_CHUNK marker);
+ *  (WAYPOINT_CHUNK / WAYPOINT_LAST_CHUNK / WAYPOINT_NO_CHUNK marker, or
+ *  WAYPOINT_PROGRESS for a read-progress frame);
  *  "0".."n-1" object REQUIRED per waypoint item (t,s,a,g,l,h,y, ...)
+ * progress frame (i=WAYPOINT_PROGRESS, n=0, carries no waypoint items):
+ *  ph string REQUIRED ('read'|'abort'|'busy'), c int REQUIRED (items read
+ *  so far), t int REQUIRED (total items); sent ~1 Hz during an FC mission
+ *  read - discardable, old clients ignore it (they only act on i=0/999)
  */
 #define TYPE_AndruavMessage_WayPoints               1027
 /**
@@ -2010,6 +2015,7 @@
 
 #define WAYPOINT_NO_CHUNK                       0
 #define WAYPOINT_CHUNK                          1
+#define WAYPOINT_PROGRESS                       2
 #define WAYPOINT_LAST_CHUNK                     999
 
 
