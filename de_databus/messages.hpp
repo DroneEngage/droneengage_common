@@ -1546,8 +1546,9 @@
  * @discard NO - a discrete control action
  * fields: a int REQUIRED (PRECLAND_ACTION_* code);
  *  b int OPTIONAL (target_num for PRECLAND_ACTION_SET_TARGET);
- *  b-g int/double OPTIONAL (chessboard params for PRECLAND_ACTION_CALIBRATE:
- *   b=cols, c=rows, d=square_size_m, e=views, f=width, g=height)
+ *  b-e int/double OPTIONAL (chessboard params for PRECLAND_ACTION_CALIBRATE:
+ *   b=cols, c=rows, d=square_size_m, e=views; calibration always runs at
+ *   the configured capture resolution - no width/height override)
  */
 #define TYPE_AndruavMessage_PRECLAND_ACTION                     6536
 /**
@@ -1578,6 +1579,8 @@
  *  c double (last reprojection RMSE px); d double (slant range m);
  *  e array<int> (tag IDs currently used); f int (PRECLAND_REASON_* gate
  *  reason code, NOMINAL when ok);
+ *  k bool REQUIRED (detection enabled flag - explicit, so an ERROR state
+ *  does not read as enabled the way state!=DISABLED does);
  *  g int OPTIONAL (PRECLAND_CALIB_STATUS_* calibration status, absent when
  *  no calibration is running);
  *  h int OPTIONAL (calibration views captured so far);
