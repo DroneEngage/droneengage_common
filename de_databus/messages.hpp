@@ -1570,6 +1570,8 @@
  *  c double (last reprojection RMSE px); d double (slant range m);
  *  e array<int> (tag IDs currently used); f int (PRECLAND_REASON_* gate
  *  reason code, NOMINAL when ok);
+ *  k bool REQUIRED (detection enabled flag - explicit, so an ERROR state
+ *  does not read as enabled the way state!=DISABLED does);
  *  g int OPTIONAL (PRECLAND_CALIB_STATUS_* calibration status, absent when
  *  no calibration is running);
  *  h int OPTIONAL (calibration views captured so far);
