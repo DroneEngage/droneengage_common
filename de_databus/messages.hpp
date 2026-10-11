@@ -1538,8 +1538,9 @@
  * @discard NO - a discrete control action
  * fields: a int REQUIRED (PRECLAND_ACTION_* code);
  *  b int OPTIONAL (target_num for PRECLAND_ACTION_SET_TARGET);
- *  b-g int/double OPTIONAL (chessboard params for PRECLAND_ACTION_CALIBRATE:
- *   b=cols, c=rows, d=square_size_m, e=views, f=width, g=height)
+ *  b-e int/double OPTIONAL (chessboard params for PRECLAND_ACTION_CALIBRATE:
+ *   b=cols, c=rows, d=square_size_m, e=views; calibration always runs at
+ *   the configured capture resolution - no width/height override)
  */
 #define TYPE_AndruavMessage_PRECLAND_ACTION                     6536
 /**
