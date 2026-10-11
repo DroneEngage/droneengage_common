@@ -162,7 +162,9 @@
  * @discard YES - latest position supersedes older ones, internal consumers tolerate staleness
  * fields: la/ln int REQUIRED (lat/lon degE7), a int REQUIRED (abs alt mm),
  *  r int REQUIRED (rel alt mm), ha int OPTIONAL (horiz accuracy mm),
- *  y int OPTIONAL (yaw cdeg)
+ *  y int OPTIONAL (yaw cdeg),
+ *  v_acc uint32 OPTIONAL (vertical accuracy mm, UINT32_MAX = unknown),
+ *  vel_acc uint32 OPTIONAL (velocity accuracy mm/s, UINT32_MAX = unknown)
  */
 #define TYPE_AndruavModule_Location_Info        9102
 
@@ -1066,6 +1068,12 @@
  * @discard YES for the telemetry stream direction (MAVLink is designed for
  *  lossy links, latest state wins) - NO for the web->module command subset
  *  (e.g. parameter writes), which must be delivered
+ * @note de_mavlink also forwards COMMAND_ACK progress on this channel: a
+ *  COMMAND_ACK arriving from the FC with result MAV_RESULT_IN_PROGRESS and
+ *  progress != 255 is re-packed as a raw mavlink COMMAND_ACK frame (result
+ *  stays IN_PROGRESS, progress = percentage 0-100) so the GCS can track
+ *  long-running commands. Terminal ACKs keep their existing path
+ *  (TYPE_AndruavMessage_Error / ack waiters), they are NOT re-forwarded here.
  */
 #define TYPE_AndruavMessage_MAVLINK                            6502
 /**
