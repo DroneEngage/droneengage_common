@@ -765,24 +765,6 @@
  */
 #define TYPE_AndruavMessage_AI_Recognition_STATUS               1077
 /**
- * @brief Best-detected-object bounding box, feeding de_tracker's AI-assisted driver.
- * @direction MODULE_TO_MODULE - yolo_ai/yolo_ai_generic -> de_tracker,
- *  sent internal_message=true so it never reaches the comm server/web
- * @rate REALTIME - fires on essentially every processed inference frame
- *  (no explicit throttle; bound only by camera FPS / inference throughput)
- * @discard YES - latest bounding box supersedes older ones, ideal candidate to drop under congestion
- * fields: b object REQUIRED - {x,y,w,h} normalized best-object box, conf
- *  float OPTIONAL (defaults 1.0; "confidence" accepted as an alias);
- *  class_id int + class_name string OPTIONAL (TASK-B4-01: the detector's
- *  own class - consumers fall back to the 1076-selected class when both
- *  are absent, so legacy geometry-only boxes keep working); tm int
- *  OPTIONAL (monotonic us for pose alignment); t array DEBUG-ONLY - full
- *  detection list, wrapped in #ifdef DEBUG in droneengage_yolo_ai
- *  ("too much traffic"), never sent in release builds
- */
-#define TYPE_AndruavMessage_AI_Recognition_TargetLocation       1078
-
-/**
  * @brief Viewlink module control (laser/tracker/AI/camera/gimbal + get-status).
  * @direction WEB_TO_MODULE
  * @rate ON_DEMAND
@@ -1720,6 +1702,31 @@
  *  Tasks/mission_planner/PROTOCOL.md (TASK-P3-01)
  */
 #define TYPE_AndruavMessage_MODULE_STATE                     6545
+/**
+ * @brief Per-frame observation list from a perceiver (de_perceive backends,
+ *  de_ir_camera). Every detection of the frame is sent; nothing is
+ *  pre-selected (no best box).
+ * @direction MODULE_TO_MODULE - perceiver -> de_tracker / geo projectors,
+ *  sent internal_message=true so it never reaches the comm server/web
+ * @rate REALTIME - one per processed frame, bound by camera FPS / inference
+ *  throughput
+ * @discard YES - the next frame supersedes this one, ideal candidate to drop
+ *  under congestion
+ * fields: cam_id string REQUIRED (camera the frame came from; selects the
+ *  mount/intrinsics); tm_capture int REQUIRED (monotonic us of frame
+ *  capture, same clock de_mavlink uses for its pose ring buffer); obs array
+ *  REQUIRED (may be empty) of entries:
+ *    cls string REQUIRED non-empty (class label, verbatim, e.g. "person",
+ *     "hotspot"); conf float REQUIRED [0..1]; box [x,y,w,h] REQUIRED -
+ *     normalized to the unrotated sensor frame, TOP-LEFT origin, all in
+ *     [0..1] with x+w<=1 and y+h<=1 (NOT the centred [-0.5..0.5] convention);
+ *    trk int OPTIONAL (stable track id once a track manager assigned one);
+ *    cls_id int OPTIONAL (detector class index); attrs object OPTIONAL
+ *     (extra per-observation data, e.g. {"temp_c":36.5} for a hotspot)
+ * No aliases and no defaults: an entry missing cls or conf, or with a box
+ * outside the range, makes the whole frame invalid (helpers/obs.hpp).
+ */
+#define TYPE_AndruavMessage_AI_OBSERVATIONS                  6546
 
 #define MODULE_HEALTH_ACTION_STATUS                             0
 

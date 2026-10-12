@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_ai_box
+TARGETS = test_read_env_flag test_cap_schema test_obs
 
 .PHONY: all clean test
 
@@ -13,7 +13,7 @@ test_read_env_flag: test_read_env_flag.o ../helpers/helpers.o
 test_cap_schema: test_cap_schema.o cap_schema.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-test_ai_box: test_ai_box.o
+test_obs: test_obs.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 test_read_env_flag.o: test_read_env_flag.cpp
@@ -25,7 +25,7 @@ test_cap_schema.o: test_cap_schema.cpp
 cap_schema.o: ../de_databus/cap_schema.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-test_ai_box.o: test_ai_box.cpp
+test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 ../helpers/helpers.o: ../helpers/helpers.cpp
@@ -34,7 +34,7 @@ test_ai_box.o: test_ai_box.cpp
 test: $(TARGETS)
 	./test_read_env_flag
 	./test_cap_schema
-	./test_ai_box
+	./test_obs
 
 clean:
 	rm -f *.o ../helpers/helpers.o $(TARGETS)
