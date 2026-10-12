@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_obs
+TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager
 
 .PHONY: all clean test
 
@@ -25,6 +25,12 @@ test_cap_schema.o: test_cap_schema.cpp
 cap_schema.o: ../de_databus/cap_schema.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+test_track_manager: test_track_manager.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_track_manager.o: test_track_manager.cpp ../helpers/track_manager.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -35,6 +41,7 @@ test: $(TARGETS)
 	./test_read_env_flag
 	./test_cap_schema
 	./test_obs
+	./test_track_manager
 
 clean:
 	rm -f *.o ../helpers/helpers.o $(TARGETS)
