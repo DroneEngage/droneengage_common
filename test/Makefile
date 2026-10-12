@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager
+TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_geo_projector_core
 
 .PHONY: all clean test
 
@@ -31,6 +31,12 @@ test_track_manager: test_track_manager.o
 test_track_manager.o: test_track_manager.cpp ../helpers/track_manager.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+test_geo_projector_core: test_geo_projector_core.o cap_schema.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_geo_projector_core.o: test_geo_projector_core.cpp ../helpers/geo_projector_core.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -42,6 +48,7 @@ test: $(TARGETS)
 	./test_cap_schema
 	./test_obs
 	./test_track_manager
+	./test_geo_projector_core
 
 clean:
 	rm -f *.o ../helpers/helpers.o $(TARGETS)
