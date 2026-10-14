@@ -2,9 +2,9 @@
  * @file test_overlay_target.cpp
  * @brief tests for helpers/overlay_target.hpp (CA-0023, epic CA-0022): the
  * `t` target a module stamps on CAMERA_OVERLAY_ACTION resolves from its
- * "camera" config section as overlay_target > output_video_device_name >
- * output_video_device > source_video_device_name > source_video_device;
- * "" = legacy draw-on-all-cameras.
+ * "camera" config section as overlay_target > cam_id (arg or section) >
+ * output_video_device_name > output_video_device > source_video_device_name
+ * > source_video_device; "" = legacy draw-on-all-cameras.
  *
  * Build & run:  make -C test && ./test/test_overlay_target
  */
@@ -79,6 +79,40 @@ bool test_full_precedence ()
 }
 
 
+bool test_cam_id_precedence ()
+{
+    std::cout << "Testing: cam_id beats device names, loses to overlay_target..." << std::endl;
+
+    // camera.cam_id inside the section beats the device names
+    ASSERT_EQ_STR(resolveOverlayTarget(nlohmann::json::parse(R"({
+        "cam_id": "cam0",
+        "output_video_device_name": "DE-TRK",
+        "output_video_device": "/dev/video3"
+    })")), "cam0");
+
+    // a caller-supplied cam_id (module keeps it at config top level) does
+    // the same when the section has none
+    ASSERT_EQ_STR(resolveOverlayTarget(nlohmann::json::parse(R"({
+        "output_video_device_name": "DE-IR-OUT"
+    })"), "DE-THERMAL"), "DE-THERMAL");
+
+    // ...but overlay_target still wins over every cam_id
+    ASSERT_EQ_STR(resolveOverlayTarget(nlohmann::json::parse(R"({
+        "overlay_target": "camera2.front",
+        "cam_id": "cam0",
+        "output_video_device_name": "DE-TRK"
+    })"), "OTHER"), "camera2.front");
+
+    // the arg beats a section cam_id it shadows
+    ASSERT_EQ_STR(resolveOverlayTarget(nlohmann::json::parse(R"({
+        "cam_id": "cam9"
+    })"), "cam0"), "cam0");
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
 bool test_empty_means_all_cameras ()
 {
     std::cout << "Testing: all-empty/missing resolves to \"\" (legacy all-cameras)..." << std::endl;
@@ -91,6 +125,8 @@ bool test_empty_means_all_cameras ()
         "output_video_device_name": "",
         "source_video_device": ""
     })")), "");
+    // an empty cam_id arg does not manufacture a target
+    ASSERT_EQ_STR(resolveOverlayTarget(nlohmann::json::parse("{}"), ""), "");
 
     std::cout << "passed" << std::endl;
     return true;
@@ -123,6 +159,7 @@ int main ()
     bool ok = true;
 
     ok &= test_full_precedence();
+    ok &= test_cam_id_precedence();
     ok &= test_empty_means_all_cameras();
     ok &= test_bad_values_are_skipped();
 

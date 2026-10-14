@@ -9,7 +9,8 @@ Newest first.
 - Per-camera OSD routing helper (CA-0023, epic CA-0022):
   `helpers/overlay_target.hpp` `de::camera::resolveOverlayTarget` resolves
   the `t` target a module stamps on `CAMERA_OVERLAY_ACTION` from its
-  `camera` config section (`overlay_target` > `output_video_device_name` >
+  `camera` config section (`overlay_target` > `cam_id` — caller arg or
+  `camera.cam_id` — > `output_video_device_name` >
   `output_video_device` > `source_video_device_name` >
   `source_video_device`; empty = legacy all-cameras). The
   `CAMERA_OVERLAY_ACTION` doc block now lists `t` matching against

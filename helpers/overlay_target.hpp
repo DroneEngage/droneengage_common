@@ -12,8 +12,13 @@
  * module's own "camera" config section identifies which stream its
  * drawings belong on.
  *
- * Precedence - first non-empty string wins:
+ * Precedence - first non-empty string wins (human-approved design change,
+ * CA-0024/CA-0026 notes: t is the sender camera's cam_id before any
+ * device-name fallback):
  *   camera.overlay_target            explicit override, always honoured
+ *   cam_id                           caller-supplied id (e.g. a module that
+ *                                    keeps cam_id at config top level)
+ *   camera.cam_id                    module-layer camera id in the section
  *   camera.output_video_device_name  V4L2 card name of the output device
  *   camera.output_video_device       /dev/videoN of the output device
  *   camera.source_video_device_name  V4L2 card name of the input device
@@ -38,19 +43,39 @@ namespace de
 namespace camera
 {
     /**
-     * @brief first non-empty string of overlay_target,
+     * @brief first non-empty string of overlay_target, cam_id (the
+     *  caller-supplied `cam_id` arg wins over camera.cam_id),
      *  output_video_device_name, output_video_device,
-     *  source_video_device_name, source_video_device in the module's
-     *  "camera" config section; "" when none is set
+     *  source_video_device_name, source_video_device; "" when none is set
      *  (= legacy draw-on-all-cameras).
      */
-    inline std::string resolveOverlayTarget (const nlohmann::json& camera_config)
+    inline std::string resolveOverlayTarget (const nlohmann::json& camera_config,
+                                             const std::string& cam_id = "")
     {
+        std::string module_cam_id = cam_id;
+
+        if (camera_config.is_object())
+        {
+            const auto it = camera_config.find("overlay_target");
+            if ((it != camera_config.end()) && it->is_string())
+            {
+                const std::string value = it->get<std::string>();
+                if (!value.empty()) return value;
+            }
+
+            if (module_cam_id.empty())
+            {
+                const auto cit = camera_config.find("cam_id");
+                if ((cit != camera_config.end()) && cit->is_string())
+                    module_cam_id = cit->get<std::string>();
+            }
+        }
+
+        if (!module_cam_id.empty()) return module_cam_id;
         if (!camera_config.is_object()) return "";
 
         static const char* keys[] =
         {
-            "overlay_target",
             "output_video_device_name",
             "output_video_device",
             "source_video_device_name",
