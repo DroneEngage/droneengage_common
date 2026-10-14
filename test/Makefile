@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry
+TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry test_overlay_target
 
 .PHONY: all clean test
 
@@ -43,6 +43,12 @@ test_camera_registry: test_camera_registry.o
 test_camera_registry.o: test_camera_registry.cpp ../helpers/camera_registry.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+test_overlay_target: test_overlay_target.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_overlay_target.o: test_overlay_target.cpp ../helpers/overlay_target.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -56,6 +62,7 @@ test: $(TARGETS)
 	./test_track_manager
 	./test_geo_projector_core
 	./test_camera_registry
+	./test_overlay_target
 	./test_geo_projector_core
 
 clean:

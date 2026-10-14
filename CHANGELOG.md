@@ -4,6 +4,17 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.11.0] - 2026-10-14
+
+- Per-camera OSD routing helper (CA-0023, epic CA-0022):
+  `helpers/overlay_target.hpp` `de::camera::resolveOverlayTarget` resolves
+  the `t` target a module stamps on `CAMERA_OVERLAY_ACTION` from its
+  `camera` config section (`overlay_target` > `output_video_device_name` >
+  `output_video_device` > `source_video_device_name` >
+  `source_video_device`; empty = legacy all-cameras). The
+  `CAMERA_OVERLAY_ACTION` doc block now lists `t` matching against
+  unique_name, local_name, V4L2 card name and `/dev/videoN`.
+
 ## [10.10.0] - 2026-09-30
 
 - Phase-4A coordination-fabric message IDs (TASK-P4A-01): `DE_EVENT`
