@@ -20,8 +20,12 @@
  * Behaviour owned here, once:
  *   - class comes from obs.cls only (no 1076 selection, no class list);
  *   - observations below min_conf are skipped;
- *   - camera model/mount are looked up by the frame's cam_id
- *     ("cameras" config map), falling back to the top-level defaults;
+ *   - camera model/mount are looked up by the frame's cam_id. The lookup
+ *     table comes from the per-unit camera registry file
+ *     ("camera_registry" config key, helpers/camera_registry.hpp) when
+ *     one is configured - an obs whose cam_id is not in the registry is
+ *     dropped with a logged error; without a registry the "cameras"
+ *     config map is used, falling back to the top-level defaults;
  *   - throttle key is the track (cam_id + trk) when the observation has a
  *     trk, else the class: rate_hz cap + moved-or-5s gate;
  *   - the "detect" advert, enable/disable invoke, "ai" and
@@ -35,12 +39,14 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "json_nlohmann.hpp"
 #include "obs.hpp"
 #include "geo_projection.hpp"
+#include "camera_registry.hpp"
 #include "../de_databus/messages.hpp"
 
 namespace de
@@ -124,7 +130,50 @@ namespace geo
                         m_config.cameras[it.key()] = e;
                     }
                 }
+
+                // CA-0012: the per-unit registry file, when configured, is
+                // the authoritative cam_id table - unknown cam_ids are
+                // dropped in onObservations.
+                m_registry_active = false;
+                if (c.contains("camera_registry") && c["camera_registry"].is_string())
+                {
+                    loadCameraRegistry(c["camera_registry"].get<std::string>());
+                }
             }
+
+            /**
+             * @brief load the per-unit camera registry file; each entry
+             * becomes a cam_id in the lookup table (mount + hfov/vfov +
+             * k1/k2 lens model). Once a registry is loaded, observations
+             * for a cam_id that is not in it are dropped with an error
+             * via fn_log_error - a wrong-camera projection is worse than
+             * none.
+             */
+            bool loadCameraRegistry (const std::string& path)
+            {
+                de::camera::CCameraRegistry reg;
+                std::string err;
+                if (!reg.load(path, err))
+                {
+                    logError("geo_projection: " + err);
+                    return false;
+                }
+
+                for (const auto& kv : reg.cameras())
+                {
+                    m_config.cameras[kv.first] = entryFromRegistry(kv.second);
+                }
+                if (!err.empty())
+                {
+                    // some entries were skipped - surface it but keep going
+                    logError("geo_projection: " + err);
+                }
+                m_registry_active = true;
+                return true;
+            }
+
+            /// true when a registry file drives the cam_id table
+            bool registryActive () const { return m_registry_active; }
 
             const GeoProjectorConfig& config () const { return m_config; }
             bool isEnabled () const { return m_config.enabled; }
@@ -270,6 +319,18 @@ namespace geo
                 if (!source.poseAt(t_frame, fix)) return 0;
 
                 const auto cam_it = m_config.cameras.find(frame.cam_id);
+                if (cam_it == m_config.cameras.end() && m_registry_active)
+                {
+                    // CA-0012: the registry is authoritative - an obs from a
+                    // camera it does not know is dropped, not projected with
+                    // the wrong mount. Logged once per cam_id.
+                    if (m_dropped_cameras.insert(frame.cam_id).second)
+                    {
+                        logError("geo_projection: dropping obs for cam_id '" + frame.cam_id
+                                 + "' - not in the camera registry");
+                    }
+                    return 0;
+                }
                 const GeoCameraEntry& cam = (cam_it != m_config.cameras.end()) ? cam_it->second : m_config.defaults;
                 GeoMountParams mount = cam.mount;
                 if (fix.has_mount_pitch) mount.pitch_deg = fix.mount_pitch_deg;
@@ -318,10 +379,12 @@ namespace geo
             {
                 m_config = GeoProjectorConfig();
                 m_throttle.clear();
+                m_dropped_cameras.clear();
                 m_ai_status = -1;
                 m_last_fix_us = 0;
                 m_last_state_pub_us = 0;
                 m_caps_advertised = false;
+                m_registry_active = false;
             }
 
             uint64_t lastFixUs () const { return m_last_fix_us; }
@@ -332,6 +395,8 @@ namespace geo
             std::function<void(const nlohmann::json& changed)> fn_publish_state;
             /// detect.detected payload
             std::function<void(const nlohmann::json& payload)> fn_fire_event;
+            /// error lines (dropped obs, registry problems)
+            std::function<void(const std::string& line)> fn_log_error;
             /// monotonic us; tests inject a manual clock
             std::function<uint64_t()> fn_now_us;
 
@@ -347,6 +412,29 @@ namespace geo
                     case TrackingTarget_STATUS_AI_Recognition_DISABLED: return "disabled";
                     default:                                            return "disabled";
                 }
+            }
+
+            /// registry intrinsics/mount -> projector camera entry.
+            /// hfov comes from the registry (stored or derived from fx);
+            /// vfov is derived from fy/height; k1/k2 are the first two
+            /// OpenCV distortion coefficients (radial - tangential and k3
+            /// are outside the projector's lens model).
+            static GeoCameraEntry entryFromRegistry (const de::camera::CameraRegistryEntry& e)
+            {
+                GeoCameraEntry out;
+                out.camera.hfov_deg  = e.hfovDeg();
+                out.camera.vfov_deg  = e.vfovDeg();
+                if (e.distortion.size() > 0) out.camera.k1 = e.distortion[0];
+                if (e.distortion.size() > 1) out.camera.k2 = e.distortion[1];
+                out.mount.pitch_deg = e.mount_pitch_deg;
+                out.mount.yaw_deg   = e.mount_yaw_deg;
+                out.mount.roll_deg  = e.mount_roll_deg;
+                return out;
+            }
+
+            void logError (const std::string& line) const
+            {
+                if (fn_log_error) fn_log_error(line);
             }
 
             static void readEntry (const nlohmann::json& c, GeoCameraEntry& e, const GeoCameraEntry& base)
@@ -422,10 +510,12 @@ namespace geo
         private:
             GeoProjectorConfig m_config;
             std::map<std::string, ThrottleEntry> m_throttle;
+            std::set<std::string> m_dropped_cameras;   ///< registry-active drops, logged once each
             int      m_ai_status = -1;
             uint64_t m_last_fix_us = 0;
             uint64_t m_last_state_pub_us = 0;
             bool     m_caps_advertised = false;
+            bool     m_registry_active = false;
     };
 
 }

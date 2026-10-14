@@ -6,6 +6,7 @@
  */
 
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -58,12 +59,14 @@ struct Rig
     uint64_t now = 100000000;     // 100 s
     std::vector<Json> events;
     std::vector<Json> states;
+    std::vector<std::string> errors;
 
     explicit Rig (const std::string& cfg = R"({"enabled":true})")
     {
         core.fn_now_us = [this]() { return now; };
         core.fn_fire_event = [this](const Json& p) { events.push_back(p); };
         core.fn_publish_state = [this](const Json& s) { states.push_back(s); };
+        core.fn_log_error = [this](const std::string& e) { errors.push_back(e); };
         core.init(Json::parse(cfg));
     }
 
@@ -211,6 +214,63 @@ bool test_camera_selected_by_cam_id ()
 }
 
 
+/// CA-0012: two registry cameras with different mounts + an unknown cam_id
+static const char* REGISTRY_PATH = "/tmp/de_test_geo_registry.json";
+static void writeTestRegistry ()
+{
+    std::ofstream out(REGISTRY_PATH, std::ios::trunc);
+    out << R"({"cameras":{
+        "DOWN":{"image_width":640,"image_height":480,
+                "camera_matrix":[700,0,320, 0,700,240, 0,0,1],
+                "distortion":[0,0],"mount_pitch_deg":-90,"hfov_deg":62.2},
+        "FWD":{"image_width":640,"image_height":480,
+               "camera_matrix":[700,0,320, 0,700,240, 0,0,1],
+               "distortion":[0,0],"mount_pitch_deg":-45,"hfov_deg":62.2}
+    }})";
+    out.close();
+}
+
+
+bool test_registry_cameras_and_drop ()
+{
+    std::cout << "Testing: registry drives per-cam mounts; unknown cam_id is dropped with an error..." << std::endl;
+
+    writeTestRegistry();
+    const std::string cfg = std::string(R"({"enabled":true,"camera_registry":")") + REGISTRY_PATH + "\"}";
+
+    Rig a(cfg), b(cfg), c(cfg);
+    ASSERT_TRUE(a.core.registryActive());
+
+    // same box, two cam_ids, different mounts from the registry file
+    a.core.onObservations(a.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), a.pose);
+    b.core.onObservations(b.frame("FWD",  { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), b.pose);
+    ASSERT_TRUE(a.events.size() == 1 && b.events.size() == 1);
+    ASSERT_TRUE(b.events[0]["range_m"].get<double>() > a.events[0]["range_m"].get<double>() + 10.0);
+
+    // no registry entry -> the obs is dropped and an error is logged (once)
+    ASSERT_TRUE(c.core.onObservations(c.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), c.pose) == 0);
+    ASSERT_TRUE(c.events.empty());
+    ASSERT_TRUE(c.errors.size() == 1);
+    ASSERT_TRUE(c.core.onObservations(c.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), c.pose) == 0);
+    ASSERT_TRUE(c.errors.size() == 1);                                  // still once
+
+    // without a registry the old behaviour stands: unknown cam_id uses defaults
+    Rig d(R"({"enabled":true,"mount_pitch_deg":-90})");
+    ASSERT_FALSE(d.core.registryActive());
+    ASSERT_TRUE(d.core.onObservations(d.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), d.pose) == 1);
+    ASSERT_TRUE(d.errors.empty());
+
+    // a missing registry file logs an error and does not go strict
+    Rig e(R"({"enabled":true,"camera_registry":"/tmp/de_test_geo_registry_missing.json"})");
+    ASSERT_FALSE(e.core.registryActive());
+    ASSERT_TRUE(e.errors.size() == 1);
+    ASSERT_TRUE(e.core.onObservations(e.frame("ANY", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), e.pose) == 1);
+
+    std::cout << "passed" << std::endl;
+    return true;
+}
+
+
 bool test_live_mount_override ()
 {
     std::cout << "Testing: a live gimbal pitch/yaw replaces the camera entry's mount..." << std::endl;
@@ -309,6 +369,7 @@ int main ()
     ok &= test_untracked_falls_back_to_class();
     ok &= test_gates();
     ok &= test_camera_selected_by_cam_id();
+    ok &= test_registry_cameras_and_drop();
     ok &= test_live_mount_override();
     ok &= test_frame_time_alignment();
     ok &= test_advert_invoke_state();

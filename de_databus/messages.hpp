@@ -2145,8 +2145,8 @@
 #define PRECLAND_ACTION_DISABLE                             0
 #define PRECLAND_ACTION_ENABLE                              1
 #define PRECLAND_ACTION_SET_TARGET                          2   // uses field b (target_num)
-#define PRECLAND_ACTION_SELFTEST                            3   // validate camera.yaml + layout, report via STATUS
-#define PRECLAND_ACTION_CALIBRATE                           4   // chessboard camera calibration -> camera.yaml
+#define PRECLAND_ACTION_SELFTEST                            3   // validate camera registry + layout, report via STATUS
+#define PRECLAND_ACTION_CALIBRATE                           4   // chessboard camera calibration -> camera_registry.json cam_id entry
                                                             // fields b=cols c=rows d=square_size_m e=views
                                                             // T4/F-6: width/height (f/g) removed —
                                                             // calibration runs at the configured capture resolution.
@@ -2157,7 +2157,7 @@
 #define PRECLAND_CALIB_STATUS_IDLE                          0   // no calibration running
 #define PRECLAND_CALIB_STATUS_CAPTURING                     1   // capturing chessboard views
 #define PRECLAND_CALIB_STATUS_COMPUTING                     2   // running cv::calibrateCamera
-#define PRECLAND_CALIB_STATUS_DONE                          3   // success, camera.yaml written (field [j] = RMS)
+#define PRECLAND_CALIB_STATUS_DONE                          3   // success, registry entry written (field [j] = RMS)
 #define PRECLAND_CALIB_STATUS_FAILED                        4   // failed (not enough views / write error)
 
 // TYPE_AndruavMessage_PRECLAND_STATUS
@@ -2165,7 +2165,7 @@
 #define PRECLAND_STATUS_SEARCHING                           1
 #define PRECLAND_STATUS_LOCKED                              2
 #define PRECLAND_STATUS_DEGRADED                            3   // detecting, but gated (RMSE/stale)
-#define PRECLAND_STATUS_ERROR                               4   // no camera / no camera.yaml / bad layout
+#define PRECLAND_STATUS_ERROR                               4   // no camera / no camera registry entry / bad layout
 
 // PRECLAND_REASON_* : module-internal gate reason codes used by de_precland's
 // publish gate (precland_gate.hpp). Not sent on the wire; the GCS only sees the
