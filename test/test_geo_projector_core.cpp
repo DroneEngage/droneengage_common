@@ -260,11 +260,31 @@ bool test_registry_cameras_and_drop ()
     ASSERT_TRUE(d.core.onObservations(d.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), d.pose) == 1);
     ASSERT_TRUE(d.errors.empty());
 
-    // a missing registry file logs an error and does not go strict
+    // a missing registry file fails closed: strict, error logged, every obs dropped
     Rig e(R"({"enabled":true,"camera_registry":"/tmp/de_test_geo_registry_missing.json"})");
-    ASSERT_FALSE(e.core.registryActive());
+    ASSERT_TRUE(e.core.registryActive());
     ASSERT_TRUE(e.errors.size() == 1);
-    ASSERT_TRUE(e.core.onObservations(e.frame("ANY", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), e.pose) == 1);
+    ASSERT_TRUE(e.core.onObservations(e.frame("ANY", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), e.pose) == 0);
+    ASSERT_TRUE(e.events.empty());
+
+    // a corrupt registry file fails closed the same way
+    const char* bad_path = "/tmp/de_test_geo_registry_corrupt.json";
+    { std::ofstream out(bad_path, std::ios::trunc); out << "not json {{{"; }
+    Rig f(std::string(R"({"enabled":true,"camera_registry":")") + bad_path + "\"}");
+    ASSERT_TRUE(f.core.registryActive());
+    ASSERT_TRUE(f.errors.size() == 1);
+    ASSERT_TRUE(f.core.onObservations(f.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), f.pose) == 0);
+    ASSERT_TRUE(f.events.empty());
+
+    // the registry is authoritative: a config-map cam_id absent from the
+    // registry is dropped too (the "cameras" map is not a fallback)
+    const std::string cfg2 = std::string(R"({"enabled":true,"camera_registry":")") + REGISTRY_PATH +
+        R"(","cameras":{"LEGACY":{"mount_pitch_deg":-45}}})";
+    Rig g(cfg2);
+    ASSERT_TRUE(g.core.registryActive());
+    ASSERT_TRUE(g.core.onObservations(g.frame("LEGACY", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), g.pose) == 0);
+    ASSERT_TRUE(g.events.empty());
+    ASSERT_TRUE(g.core.onObservations(g.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), g.pose) == 1);
 
     std::cout << "passed" << std::endl;
     return true;

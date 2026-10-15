@@ -152,6 +152,20 @@ bool test_bad_files ()
     ASSERT_TRUE(reg.size() == 1 && reg.find("GOOD") != nullptr);
     ASSERT_TRUE(!err.empty());   // the skipped entry's error is reported
 
+    // an entry that parses but has degenerate intrinsics is skipped the
+    // same way - a zero-FOV camera must fail closed, not project garbage
+    writeFile("/tmp/de_test_camera_registry_badintr.json", R"({"cameras":{
+        "GOOD":{"image_width":640,"image_height":480,
+                "camera_matrix":[700,0,320, 0,700,240, 0,0,1]},
+        "NOFOCAL":{"image_width":640,"image_height":480,
+                   "camera_matrix":[0,0,320, 0,700,240, 0,0,1],
+                   "mount_pitch_deg":-45},
+        "NOSIZE":{"camera_matrix":[700,0,320, 0,700,240, 0,0,1]}}})");
+    ASSERT_TRUE(reg.load("/tmp/de_test_camera_registry_badintr.json", err));
+    ASSERT_TRUE(reg.size() == 1 && reg.find("GOOD") != nullptr);
+    ASSERT_TRUE(reg.find("NOFOCAL") == nullptr && reg.find("NOSIZE") == nullptr);
+    ASSERT_TRUE(!err.empty());
+
     std::cout << "passed" << std::endl;
     return true;
 }
