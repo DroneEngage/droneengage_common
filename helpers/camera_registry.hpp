@@ -157,8 +157,10 @@ namespace camera
         public:
 
             /// load a registry file; false + err on missing/invalid file.
-            /// Individual entries that fail fromJson are skipped with the
-            /// first error kept in err (registry stays usable).
+            /// Individual entries that fail fromJson - or parse but carry
+            /// intrinsics no consumer can project with (width/height/fx/fy
+            /// <= 0) - are skipped with the first error kept in err
+            /// (registry stays usable; a dropped cam_id fails closed).
             bool load (const std::string& path, std::string& err)
             {
                 m_cameras.clear();
@@ -193,14 +195,21 @@ namespace camera
                 {
                     CameraRegistryEntry e;
                     std::string entry_err;
-                    if (e.fromJson(it.value(), entry_err))
+                    if (!e.fromJson(it.value(), entry_err))
                     {
-                        m_cameras[it.key()] = e;
+                        if (err.empty()) err = "camera '" + it.key() + "': " + entry_err;
+                        continue;
                     }
-                    else if (err.empty())
+                    if (!e.validIntrinsics())
                     {
-                        err = "camera '" + it.key() + "': " + entry_err;
+                        if (err.empty())
+                        {
+                            err = "camera '" + it.key() + "': invalid intrinsics "
+                                  "(image_width/image_height/fx/fy must be > 0)";
+                        }
+                        continue;
                     }
+                    m_cameras[it.key()] = e;
                 }
 
                 m_path = path;

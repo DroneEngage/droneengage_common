@@ -144,18 +144,24 @@ namespace geo
             /**
              * @brief load the per-unit camera registry file; each entry
              * becomes a cam_id in the lookup table (mount + hfov/vfov +
-             * k1/k2 lens model). Once a registry is loaded, observations
-             * for a cam_id that is not in it are dropped with an error
-             * via fn_log_error - a wrong-camera projection is worse than
-             * none.
+             * k1/k2 lens model). Once a registry is configured it is
+             * authoritative: observations for a cam_id that is not in it
+             * are dropped with an error via fn_log_error - a wrong-camera
+             * projection is worse than none. That holds even when the file
+             * will not load: the config "cameras" table is NOT a fallback,
+             * so a missing/corrupt registry drops every obs rather than
+             * silently projecting with a mount that belongs to no real
+             * camera.
              */
             bool loadCameraRegistry (const std::string& path)
             {
                 de::camera::CCameraRegistry reg;
                 std::string err;
+                m_registry_active = true;
+                m_config.cameras.clear();
                 if (!reg.load(path, err))
                 {
-                    logError("geo_projection: " + err);
+                    logError("geo_projection: " + err + " - failing closed (all obs dropped)");
                     return false;
                 }
 
@@ -168,7 +174,6 @@ namespace geo
                     // some entries were skipped - surface it but keep going
                     logError("geo_projection: " + err);
                 }
-                m_registry_active = true;
                 return true;
             }
 
