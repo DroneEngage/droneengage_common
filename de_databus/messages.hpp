@@ -1579,8 +1579,13 @@
  * @discard YES - overlay state is latest-wins; a dropped update is superseded
  *  by the next set/clear
  * fields: a int REQUIRED (CAMERA_OVERLAY_ACTION_* code);
- *  t string OPTIONAL (target camera unique_name or local_name; absent or
- *   empty = all cameras);
+ *  t string OPTIONAL (target camera: de_camera matches it against the
+ *   stream's configured cam_id (camera_list), unique_name, configured
+ *   local_name, resource key, V4L2 card name (device_name) or
+ *   /dev/videoN path; the GCS human form "<cap_ns>.<key>" (e.g.
+ *   "camera2.front") is drawn only by the camera module whose cap_ns
+ *   matches; senders resolve it from their camera config - see
+ *   helpers/overlay_target.hpp; absent or empty = all cameras (legacy));
  *  i int|array<int> REQUIRED for CAMERA_OVERLAY_ACTION_REMOVE_SHAPE (shape
  *   id, or batch of ids);
  *  s object|array<object> REQUIRED for CAMERA_OVERLAY_ACTION_SET_SHAPE
