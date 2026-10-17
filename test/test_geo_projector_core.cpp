@@ -286,6 +286,30 @@ bool test_registry_cameras_and_drop ()
     ASSERT_TRUE(g.events.empty());
     ASSERT_TRUE(g.core.onObservations(g.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), g.pose) == 1);
 
+    // CA-0037: a non-string camera_registry value is rejected loudly, fail closed
+    Rig h(R"({"enabled":true,"camera_registry":{"path":"x"}})");
+    ASSERT_TRUE(h.core.registryActive());
+    ASSERT_TRUE(h.errors.size() == 1);
+    ASSERT_TRUE(h.core.onObservations(h.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), h.pose) == 0);
+
+    // CA-0037: every entry skipped by validIntrinsics -> clear error, fail closed
+    const char* inv_path = "/tmp/de_test_geo_registry_invalid.json";
+    { std::ofstream out(inv_path, std::ios::trunc);
+      out << R"({"cameras":{"DOWN":{"image_width":0,"image_height":0,"camera_matrix":[0,0,0,0,0,0,0,0,1]}}})"; }
+    Rig k(std::string(R"({"enabled":true,"camera_registry":")") + inv_path + "\"}");
+    ASSERT_TRUE(k.core.registryActive());
+    ASSERT_TRUE(k.errors.size() == 1);
+    ASSERT_TRUE(k.errors[0].find("no usable cameras") != std::string::npos);
+    ASSERT_TRUE(k.core.onObservations(k.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), k.pose) == 0);
+
+    // CA-0037: reconfigure clears the drop log so a repeat drop is logged again
+    Rig m(cfg);
+    m.core.onObservations(m.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), m.pose);
+    ASSERT_TRUE(m.errors.size() == 1);
+    m.core.init(Json::parse(cfg));
+    m.core.onObservations(m.frame("GHOST", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), m.pose);
+    ASSERT_TRUE(m.errors.size() == 2);
+
     std::cout << "passed" << std::endl;
     return true;
 }

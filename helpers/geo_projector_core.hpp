@@ -134,10 +134,23 @@ namespace geo
                 // CA-0012: the per-unit registry file, when configured, is
                 // the authoritative cam_id table - unknown cam_ids are
                 // dropped in onObservations.
+                // Reconfigure re-arms the once-per-cam_id drop log.
+                m_dropped_cameras.clear();
                 m_registry_active = false;
-                if (c.contains("camera_registry") && c["camera_registry"].is_string())
+                if (c.contains("camera_registry"))
                 {
-                    loadCameraRegistry(c["camera_registry"].get<std::string>());
+                    if (c["camera_registry"].is_string())
+                    {
+                        loadCameraRegistry(c["camera_registry"].get<std::string>());
+                    }
+                    else
+                    {
+                        // a present-but-wrong-typed key is a config mistake:
+                        // reject loudly and fail closed (no silent legacy fallback)
+                        m_registry_active = true;
+                        m_config.cameras.clear();
+                        logError("geo_projection: 'camera_registry' must be a string path - failing closed (all obs dropped)");
+                    }
                 }
             }
 
@@ -168,6 +181,14 @@ namespace geo
                 for (const auto& kv : reg.cameras())
                 {
                     m_config.cameras[kv.first] = entryFromRegistry(kv.second);
+                }
+                if (reg.size() == 0)
+                {
+                    // every entry was skipped (or the file lists none): the
+                    // registry is active but empty, so every obs is dropped
+                    logError("geo_projection: camera registry '" + path + "' has no usable cameras"
+                             + (err.empty() ? std::string() : " (" + err + ")") + " - failing closed (all obs dropped)");
+                    return false;
                 }
                 if (!err.empty())
                 {
