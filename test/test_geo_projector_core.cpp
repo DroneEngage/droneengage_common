@@ -6,6 +6,8 @@
  */
 
 #include <cmath>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -215,7 +217,24 @@ bool test_camera_selected_by_cam_id ()
 
 
 /// CA-0012: two registry cameras with different mounts + an unknown cam_id
-static const char* REGISTRY_PATH = "/tmp/de_test_geo_registry.json";
+/// Per-run private temp directory (mkdtemp), removed at the end of main().
+static std::string& testDir ()
+{
+    static std::string dir;
+    if (dir.empty())
+    {
+        std::string tmpl = (std::filesystem::temp_directory_path() / "de_test_geo_XXXXXX").string();
+        if (mkdtemp(&tmpl[0]) == nullptr)
+        {
+            std::cerr << "mkdtemp failed" << std::endl;
+            std::exit(2);
+        }
+        dir = tmpl;
+    }
+    return dir;
+}
+static std::string tmpPath (const std::string& name) { return testDir() + "/" + name; }
+#define REGISTRY_PATH tmpPath("registry.json")
 static void writeTestRegistry ()
 {
     std::ofstream out(REGISTRY_PATH, std::ios::trunc);
@@ -261,14 +280,14 @@ bool test_registry_cameras_and_drop ()
     ASSERT_TRUE(d.errors.empty());
 
     // a missing registry file fails closed: strict, error logged, every obs dropped
-    Rig e(R"({"enabled":true,"camera_registry":"/tmp/de_test_geo_registry_missing.json"})");
+    Rig e(R"({"enabled":true,"camera_registry":"/nonexistent_de_test_dir/geo_registry_missing.json"})");
     ASSERT_TRUE(e.core.registryActive());
     ASSERT_TRUE(e.errors.size() == 1);
     ASSERT_TRUE(e.core.onObservations(e.frame("ANY", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), e.pose) == 0);
     ASSERT_TRUE(e.events.empty());
 
     // a corrupt registry file fails closed the same way
-    const char* bad_path = "/tmp/de_test_geo_registry_corrupt.json";
+    const std::string bad_path = tmpPath("corrupt.json");
     { std::ofstream out(bad_path, std::ios::trunc); out << "not json {{{"; }
     Rig f(std::string(R"({"enabled":true,"camera_registry":")") + bad_path + "\"}");
     ASSERT_TRUE(f.core.registryActive());
@@ -293,7 +312,7 @@ bool test_registry_cameras_and_drop ()
     ASSERT_TRUE(h.core.onObservations(h.frame("DOWN", { Rig::ob("person", 0.45, 0.45, 0.9, 1) }), h.pose) == 0);
 
     // CA-0037: every entry skipped by validIntrinsics -> clear error, fail closed
-    const char* inv_path = "/tmp/de_test_geo_registry_invalid.json";
+    const std::string inv_path = tmpPath("invalid.json");
     { std::ofstream out(inv_path, std::ios::trunc);
       out << R"({"cameras":{"DOWN":{"image_width":0,"image_height":0,"camera_matrix":[0,0,0,0,0,0,0,0,1]}}})"; }
     Rig k(std::string(R"({"enabled":true,"camera_registry":")") + inv_path + "\"}");
@@ -417,6 +436,8 @@ int main ()
     ok &= test_live_mount_override();
     ok &= test_frame_time_alignment();
     ok &= test_advert_invoke_state();
+
+    { std::error_code ec; std::filesystem::remove_all(testDir(), ec); }
 
     if (ok)
     {
