@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry test_overlay_target test_cpu_monitor
+TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry test_overlay_target test_cpu_monitor test_cpu_aggregator
 
 .PHONY: all clean test
 
@@ -58,6 +58,15 @@ test_cpu_monitor.o: test_cpu_monitor.cpp ../de_databus/de_cpu_monitor.hpp
 de_cpu_monitor.o: ../de_databus/de_cpu_monitor.cpp ../de_databus/de_cpu_monitor.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+test_cpu_aggregator: test_cpu_aggregator.o de_cpu_aggregator.o de_cpu_monitor.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_cpu_aggregator.o: test_cpu_aggregator.cpp ../de_databus/de_cpu_aggregator.hpp ../de_databus/de_cpu_monitor.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+de_cpu_aggregator.o: ../de_databus/de_cpu_aggregator.cpp ../de_databus/de_cpu_aggregator.hpp ../de_databus/de_cpu_monitor.hpp ../de_databus/messages.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -73,6 +82,7 @@ test: $(TARGETS)
 	./test_camera_registry
 	./test_overlay_target
 	./test_cpu_monitor
+	./test_cpu_aggregator
 	./test_geo_projector_core
 
 clean:

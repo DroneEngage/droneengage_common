@@ -6,3 +6,4 @@ test/test_read_env_flag
 test/test_track_manager
 test/test_geo_projector_core
 test/test_cpu_monitor
+test/test_cpu_aggregator

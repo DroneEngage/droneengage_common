@@ -319,3 +319,20 @@ Each module reports its board to de_comm on intermodule message 6547
 (`TYPE_AndruavMessage_MODULE_CPU_STATUS`); de_comm aggregates all boards
 into the unit CPU state sent to the GCS as 1008 `CP`/`MI`. Tests:
 `make -C test test_cpu_monitor && ./test/test_cpu_monitor`.
+
+## Unit CPU Aggregator (`de_databus/de_cpu_aggregator`)
+
+The de_comm-side half of the unit CPU feature (GL-0039): `CCpuAggregator`
+merges every module's 6547 board report into the virtual unit state that
+goes out on 1008. Latest report kept per (board, module); a board is
+SUPER_BUSY when any fresh report on it says so (fresh = seen within
+3 x `report_s`), and the unit is SUPER_BUSY iff at least one fresh board
+is (human's TASK-29 Q1 answer - never an average, `CP.u` = max over
+boards). `tick(now_ms)` returns a `UNIT_CPU_EVENT_*` bitmask - one edge
+per unit transition plus `SUMMARY_DUE` every `summary_s` (0 = off).
+A report silent > 3 x `report_s` marks its board `st=true` in `CP.b`;
+> 60 s removes the board and recomputes. `deBuildUnitCpuWarning()` /
+`deBuildUnitCpuSummary()` build the 1008 payload (MI 1/2/3, DS names
+the busiest board and its highest-`pu` module). Pure - no sockets, no
+clock reads. Tests: `make -C test test_cpu_aggregator &&
+./test/test_cpu_aggregator`.
