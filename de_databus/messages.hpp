@@ -254,7 +254,15 @@
  *  component); NT int REQUIRED (severity, see NOTIFICATION_TYPE_*);
  *  DS string REQUIRED (description);
  *  MI int OPTIONAL (message_ID - machine-readable event id, see
- *  MESSAGE_ID_*; absent on all existing senders, 0 = none)
+ *  MESSAGE_ID_*; absent on all existing senders, 0 = none);
+ *  CP object OPTIONAL (CPU detail, present only when MI is a CPU id):
+ *   u int (unit CPU busy % - max over boards); s int (unit state, see
+ *   CPU_BOARD_STATE_*); b array of per-board entries {id string (board
+ *   id), u int (board CPU %), s int (board state), st bool OPTIONAL
+ *   (stale - no fresh report), m array OPTIONAL of [module_id string,
+ *   pu int process CPU %] pairs}.
+ *  MI 1/2 are UNIT-level transitions (the aggregated virtual unit state,
+ *  not one board); MI 3 is the periodic unit summary.
  */
 #define TYPE_AndruavMessage_Error                   1008
 /**
@@ -1735,6 +1743,36 @@
  */
 #define TYPE_AndruavMessage_AI_OBSERVATIONS                  6546
 
+/**
+ * @brief Board CPU report from one module to the comm broker. Every module
+ *  that runs the board CPU sampler (de_common de_cpu_monitor) reports its
+ *  board's whole-system CPU usage and its own busy/free view; de_comm
+ *  aggregates all boards into the unit CPU state sent to the GCS as
+ *  1008 CP/MI (see MESSAGE_ID_CPU_*).
+ * @direction MODULE_TO_MODULE (module -> de_comm broker) - intermodule
+ *  only, sent internal_message=true, never relayed to the server
+ * @rate LOW - one report per report_s tick (default 10 s) per module,
+ *  plus immediate edge reports on board busy/free transitions (see ev)
+ * @discard YES - the next periodic report supersedes this one
+ * fields: bd string REQUIRED (board id, see deBoardId()); u int REQUIRED
+ *  (board whole-system CPU busy %, 0..100); pu int OPTIONAL (this
+ *  process's CPU %, 0..100); s int REQUIRED (board state as seen by this
+ *  module, see CPU_BOARD_STATE_*); ev int REQUIRED (report reason, see
+ *  CPU_REPORT_EVENT_*)
+ */
+#define TYPE_AndruavMessage_MODULE_CPU_STATUS               6547
+
+// CPU_BOARD_STATE_* : 6547 field [s] - board busy state as seen by the
+// reporting module (de_cpu_monitor FREE<->SUPER_BUSY hysteresis); also the
+// unit state value inside the 1008 CP object.
+#define CPU_BOARD_STATE_FREE                                0
+#define CPU_BOARD_STATE_SUPER_BUSY                          1
+
+// CPU_REPORT_EVENT_* : 6547 field [ev] - why this report was sent
+#define CPU_REPORT_EVENT_PERIODIC                           0   // scheduled report_s tick
+#define CPU_REPORT_EVENT_BECAME_SUPER_BUSY                  1   // board crossed into SUPER_BUSY
+#define CPU_REPORT_EVENT_BECAME_FREE                        2   // board crossed back to FREE
+
 #define MODULE_HEALTH_ACTION_STATUS                             0
 
 // MODULE_HEALTH_STATUS_* : field [hs]
@@ -2030,12 +2068,16 @@
 // Machine-readable event id so the GCS can act without parsing DS.
 // Absent / MESSAGE_ID_NONE = no id; all pre-existing senders omit MI.
 #define MESSAGE_ID_NONE                         0
-// unit CPU sustained above the super-busy threshold:
-// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_WARNING
+// UNIT-level CPU transition to super busy (any board SUPER_BUSY under the
+// unit aggregator's max-over-boards rule):
+// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_WARNING, carries CP
 #define MESSAGE_ID_CPU_SUPER_BUSY               1
-// unit CPU back below the free threshold:
-// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_NOTICE
+// UNIT-level CPU transition back to free:
+// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_NOTICE, carries CP
 #define MESSAGE_ID_CPU_FREE                     2
+// periodic UNIT CPU summary:
+// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_INFO, carries CP
+#define MESSAGE_ID_CPU_SUMMARY                  3
 
 
 

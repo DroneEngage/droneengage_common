@@ -4,6 +4,19 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.13.0] - 2026-10-18
+
+- New intermodule message `TYPE_AndruavMessage_MODULE_CPU_STATUS` (6547):
+  MODULE_TO_MODULE only (module -> de_comm, `internal_message=true`,
+  never relayed). Fields `bd` (board id), `u` (board CPU %), `pu` (process
+  CPU %, optional), `s` (CPU_BOARD_STATE_FREE/SUPER_BUSY), `ev`
+  (CPU_REPORT_EVENT_PERIODIC/BECAME_SUPER_BUSY/BECAME_FREE) (GL-0036).
+- 1008: `MI` 1/2 re-documented as UNIT-level CPU transitions; new
+  `MESSAGE_ID_CPU_SUMMARY` (3, `NT=NOTIFICATION_TYPE_INFO`) for the
+  periodic unit summary; new optional `CP` object (unit + per-board CPU
+  detail) present only when `MI` is a CPU id. Contract only — no
+  behaviour change.
+
 ## [10.12.0] - 2026-10-18
 
 - `TYPE_AndruavMessage_Error` (1008) gains an optional `MI` int field
