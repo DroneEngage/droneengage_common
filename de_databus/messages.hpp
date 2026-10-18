@@ -252,7 +252,9 @@
  * @discard NO - alerts must be delivered
  * fields: EN int REQUIRED (error number); IT int REQUIRED (reporting
  *  component); NT int REQUIRED (severity, see NOTIFICATION_TYPE_*);
- *  DS string REQUIRED (description)
+ *  DS string REQUIRED (description);
+ *  MI int OPTIONAL (message_ID - machine-readable event id, see
+ *  MESSAGE_ID_*; absent on all existing senders, 0 = none)
  */
 #define TYPE_AndruavMessage_Error                   1008
 /**
@@ -2002,6 +2004,8 @@
 #define ERROR_TYPE_ERROR_MODULE                 13
 #define ERROR_TYPE_ERROR_P2P                    23
 #define ERROR_TYPE_ERROR_SDR                    24
+// unit system-load notices (CPU busy/free); see MESSAGE_ID_CPU_* on message 1008
+#define ERROR_SYSTEM_LOAD                       30
 #define ERROR_GEO_FENCE_ERROR                   100
 #define ERROR_USER_DEFINED                      1000
 
@@ -2021,6 +2025,17 @@
 #define NOTIFICATION_TYPE_INFO                  6
 // 7	MAV_SEVERITY_DEBUG	Useful non-operational messages that can assist in debugging. These should not occur during normal operation.
 #define NOTIFICATION_TYPE_DEBUG                 7
+
+// Message IDs - optional MI field on TYPE_AndruavMessage_Error (1008).
+// Machine-readable event id so the GCS can act without parsing DS.
+// Absent / MESSAGE_ID_NONE = no id; all pre-existing senders omit MI.
+#define MESSAGE_ID_NONE                         0
+// unit CPU sustained above the super-busy threshold:
+// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_WARNING
+#define MESSAGE_ID_CPU_SUPER_BUSY               1
+// unit CPU back below the free threshold:
+// EN=ERROR_SYSTEM_LOAD, NT=NOTIFICATION_TYPE_NOTICE
+#define MESSAGE_ID_CPU_FREE                     2
 
 
 

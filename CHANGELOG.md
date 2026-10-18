@@ -4,6 +4,17 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [10.12.0] - 2026-10-18
+
+- `TYPE_AndruavMessage_Error` (1008) gains an optional `MI` int field
+  (message_ID): a machine-readable event id so the GCS can act on an
+  event without parsing `DS`. Absent/0 = none; all existing senders
+  omit it (GL-0031).
+- New `MESSAGE_ID_*` constants: `MESSAGE_ID_CPU_SUPER_BUSY` (1,
+  `NT=NOTIFICATION_TYPE_WARNING`) and `MESSAGE_ID_CPU_FREE` (2,
+  `NT=NOTIFICATION_TYPE_NOTICE`), plus `ERROR_SYSTEM_LOAD` (30) as the
+  `EN` for unit system-load events. Contract only — no behaviour change.
+
 ## [10.11.0] - 2026-10-14
 
 - Per-camera OSD routing helper (CA-0023, epic CA-0022):
