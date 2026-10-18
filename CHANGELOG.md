@@ -4,6 +4,18 @@ Major changes to `de_common` — the shared C++ library vendored into every
 DroneEngage module (module base, message parser, UDP bus, config, helpers).
 Newest first.
 
+## [Unreleased]
+
+- `de_databus/de_cpu_monitor.{hpp,cpp}`: board CPU monitor moved here
+  from de_comm (GL-0032 logic, unchanged API in `de::comm`): `CCpuMonitor`
+  FREE<->SUPER_BUSY hysteresis, `deParseProcStatCpu`, `deCpuUsagePercent`.
+  New: `deParseProcSelfStatCpu` / `deProcessCpuUsagePercent` (process CPU
+  for the 6547 `pu` field), `deBoardId()` (`DE_BOARD_ID` > machine-id >
+  hostname), `deReadProcStatCpu` / `deReadProcSelfStatCpu` sampler
+  wrappers (`DE_PROC_STAT_PATH` / `DE_PROC_SELF_STAT_PATH` overrides),
+  and `cpu_monitor` config keys `report_s` (10) / `summary_s` (60, 0 =
+  off) (GL-0037).
+
 ## [10.13.0] - 2026-10-18
 
 - New intermodule message `TYPE_AndruavMessage_MODULE_CPU_STATUS` (6547):

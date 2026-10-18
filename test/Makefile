@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 INCLUDES = -I..
-TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry test_overlay_target
+TARGETS = test_read_env_flag test_cap_schema test_obs test_track_manager test_geo_projector_core test_camera_registry test_overlay_target test_cpu_monitor
 
 .PHONY: all clean test
 
@@ -49,6 +49,15 @@ test_overlay_target: test_overlay_target.o
 test_overlay_target.o: test_overlay_target.cpp ../helpers/overlay_target.hpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+test_cpu_monitor: test_cpu_monitor.o de_cpu_monitor.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+test_cpu_monitor.o: test_cpu_monitor.cpp ../de_databus/de_cpu_monitor.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+de_cpu_monitor.o: ../de_databus/de_cpu_monitor.cpp ../de_databus/de_cpu_monitor.hpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
 test_obs.o: test_obs.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -63,6 +72,7 @@ test: $(TARGETS)
 	./test_geo_projector_core
 	./test_camera_registry
 	./test_overlay_target
+	./test_cpu_monitor
 	./test_geo_projector_core
 
 clean:

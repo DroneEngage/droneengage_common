@@ -293,3 +293,29 @@ DE Module Architecture Integration
 ```
 
 
+
+## Board CPU Monitor (`de_databus/de_cpu_monitor`)
+
+Pure per-board CPU watch shared by every module (GL-0037). `CCpuMonitor`
+computes whole-system busy% between successive `/proc/stat` aggregate
+samples and runs a `FREE <-> SUPER_BUSY` hysteresis (defaults: busy >=
+90 % held `sustain_s` = 5 s, free <= 70 % held 5 s, dead band between
+them holds state). Transitions are reported once, on the edge; nothing
+is re-sent while the load is steady.
+
+- `deReadProcStatCpu()` / `deReadProcSelfStatCpu()` — sampler wrappers
+  (paths overridable via `DE_PROC_STAT_PATH` / `DE_PROC_SELF_STAT_PATH`
+  for dev-box tests that fake a busy board); the process read backs the
+  6547 `pu` field.
+- `deBoardId()` — `DE_BOARD_ID` env wins, else first line of
+  `/etc/machine-id`, else hostname (cached); backs the 6547 `bd` field.
+- `deParseCpuMonitorConfig()` — optional `cpu_monitor` config object:
+  `enabled`, `super_busy_percent`, `free_percent`, `sustain_s`,
+  `report_s` (module periodic 6547 interval, default 10), `summary_s`
+  (unit summary to GCS, default 60, 0 = off). Invalid values fall back
+  to all defaults with a console warning.
+
+Each module reports its board to de_comm on intermodule message 6547
+(`TYPE_AndruavMessage_MODULE_CPU_STATUS`); de_comm aggregates all boards
+into the unit CPU state sent to the GCS as 1008 `CP`/`MI`. Tests:
+`make -C test test_cpu_monitor && ./test/test_cpu_monitor`.
