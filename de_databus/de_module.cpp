@@ -1,11 +1,13 @@
 #include <chrono>
 #include <future>
+#include <unistd.h>
 
 #include "../helpers/colors.hpp"
 #include "../helpers/helpers.hpp"
 #include "de_module.hpp"
 #include "de_facade_base.hpp"
 #include "cap_schema.hpp"
+#include "configFile.hpp"
 
 
 
@@ -75,6 +77,17 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
         cUDPClient.start();
     }
 
+    // TASK-31 (GL-0038): board CPU reporting thresholds come from the
+    // optional "cpu_monitor" object in this module's own config (absent
+    // -> defaults; enabled=false sends nothing).
+    m_cpu_monitor_config = deParseCpuMonitorConfig(de::CConfigFile::getInstance().GetConfigJSON());
+    m_cpu_monitor.configure(m_cpu_monitor_config);
+    m_board_id = deBoardId();
+    m_clock_ticks_per_s = sysconf(_SC_CLK_TCK);
+    if (m_clock_ticks_per_s <= 0) m_clock_ticks_per_s = 100;
+    m_have_prev_proc        = false;
+    m_last_cpu_report_ms    = 0;
+
     m_health_thread_exit = false;
     m_health_thread = std::thread(&CModule::healthHeartbeatLoop, this);
 
@@ -117,12 +130,83 @@ void de::comm::CModule::healthHeartbeatLoop ()
     {
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
+        // TASK-31 (GL-0038): board CPU sample every second; the report
+        // goes to de_comm on 6547 (transition edge + every report_s).
+        if (m_cpu_monitor_config.enabled)
+        {
+            const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+            cpuReportTick(now_ms);
+        }
+
         if (++tick >= MODULE_HEALTH_INTERVAL_SEC)
         {
             tick = 0;
             CFacade_Base::getInstance().sendMemoryStatus("");
         }
     }
+}
+
+
+/**
+ * @brief one 1 Hz CPU sample on the health thread: feed the board
+ * monitor, refresh the process CPU delta, then report to de_comm on a
+ * transition edge (ev = BECAME_*) or every report_s (ev = PERIODIC).
+ * A transition report resets the periodic clock so the two never emit
+ * back to back.
+ */
+void de::comm::CModule::cpuReportTick (const uint64_t now_ms)
+{
+    CpuTimes cpu_times;
+    if (!deReadProcStatCpu(cpu_times)) return;
+
+    const CpuTransition transition = m_cpu_monitor.updateFromTimes(cpu_times, now_ms);
+    const double usage = m_cpu_monitor.lastUsagePercent();
+    if (usage < 0.0) return;   // first sample only seeds the baseline
+
+    int process_usage = 0;
+    ProcCpuTimes proc_times;
+    if (deReadProcSelfStatCpu(proc_times))
+    {
+        if (m_have_prev_proc && (now_ms > m_prev_proc_ms))
+        {
+            const double proc_pct = deProcessCpuUsagePercent(m_prev_proc_times, proc_times,
+                                                             now_ms - m_prev_proc_ms,
+                                                             m_clock_ticks_per_s);
+            if (proc_pct >= 0.0) process_usage = static_cast<int>(proc_pct + 0.5);
+        }
+        m_prev_proc_times = proc_times;
+        m_prev_proc_ms    = now_ms;
+        m_have_prev_proc  = true;
+    }
+
+    int report_event = -1;
+    if (transition == CpuTransition::BECAME_SUPER_BUSY)
+    {
+        report_event = CPU_REPORT_EVENT_BECAME_SUPER_BUSY;
+    }
+    else if (transition == CpuTransition::BECAME_FREE)
+    {
+        report_event = CPU_REPORT_EVENT_BECAME_FREE;
+    }
+    else if ((m_last_cpu_report_ms == 0)
+             || ((now_ms >= m_last_cpu_report_ms)
+                 && ((now_ms - m_last_cpu_report_ms)
+                     >= static_cast<uint64_t>(m_cpu_monitor_config.report_s) * 1000ULL)))
+    {
+        report_event = CPU_REPORT_EVENT_PERIODIC;
+    }
+
+    if (report_event < 0) return;
+
+    m_last_cpu_report_ms = now_ms;
+    CFacade_Base::getInstance().sendCpuStatus(
+        m_board_id,
+        static_cast<int>(usage + 0.5),
+        process_usage,
+        (m_cpu_monitor.state() == CpuBusyState::SUPER_BUSY) ? CPU_BOARD_STATE_SUPER_BUSY
+                                                            : CPU_BOARD_STATE_FREE,
+        report_event);
 }
 
 

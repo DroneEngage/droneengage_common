@@ -181,6 +181,29 @@ std::string de::comm::deBoardId ()
 }
 
 
+Json_de de::comm::deBuildCpuStatusJson (const std::string& board_id,
+                                        const int board_usage_percent,
+                                        const int process_usage_percent,
+                                        const int board_state,
+                                        const int report_event)
+{
+    const auto clamp_pct = [] (const int v) -> int
+    {
+        if (v < 0)   return 0;
+        if (v > 100) return 100;
+        return v;
+    };
+
+    Json_de report;
+    report["bd"] = board_id;
+    report["u"]  = clamp_pct(board_usage_percent);
+    report["pu"] = clamp_pct(process_usage_percent);
+    report["s"]  = board_state;
+    report["ev"] = report_event;
+    return report;
+}
+
+
 de::comm::CCpuMonitor::CCpuMonitor ()
 {
 }

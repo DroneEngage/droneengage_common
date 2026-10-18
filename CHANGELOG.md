@@ -6,6 +6,12 @@ Newest first.
 
 ## [Unreleased]
 
+- Every module now reports its board CPU to de_comm on 6547
+  (`TYPE_AndruavMessage_MODULE_CPU_STATUS`, intermodule only): the
+  `CModule` health thread samples once a second and sends on a
+  busy/free transition edge and every `cpu_monitor.report_s`;
+  `enabled:false` silences it. New `deBuildCpuStatusJson` (pure report
+  builder) and `CFacade_Base::sendCpuStatus` (GL-0038).
 - `de_databus/de_cpu_monitor.{hpp,cpp}`: board CPU monitor moved here
   from de_comm (GL-0032 logic, unchanged API in `de::comm`): `CCpuMonitor`
   FREE<->SUPER_BUSY hysteresis, `deParseProcStatCpu`, `deCpuUsagePercent`.

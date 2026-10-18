@@ -4,6 +4,7 @@
 #include "../helpers/colors.hpp"
 #include "de_facade_base.hpp"
 #include "de_module_health.hpp"
+#include "de_cpu_monitor.hpp"
 
 
 
@@ -85,6 +86,24 @@ void CFacade_Base::sendMemoryStatus(const std::string& target_party_id) const
 
     #ifdef DDEBUG
         std::cout << "sendMemoryStatus:" << message.dump() << std::endl;
+    #endif
+
+    return ;
+}
+
+
+void CFacade_Base::sendCpuStatus (const std::string& board_id, const int board_usage_percent,
+                                  const int process_usage_percent, const int board_state,
+                                  const int report_event) const
+{
+    const Json_de message = deBuildCpuStatusJson(board_id, board_usage_percent,
+                                                 process_usage_percent, board_state,
+                                                 report_event);
+
+    m_module.sendJMSG ("", message, TYPE_AndruavMessage_MODULE_CPU_STATUS, true);
+
+    #ifdef DEBUG
+        std::cout << "sendCpuStatus:" << message.dump() << std::endl;
     #endif
 
     return ;

@@ -16,6 +16,7 @@
 #include <string>
 
 #include "../de_databus/de_cpu_monitor.hpp"
+#include "../de_databus/messages.hpp"
 
 using namespace de::comm;
 
@@ -319,6 +320,37 @@ static void test_sampler_path_override ()
 }
 
 
+// ------------------------------------------------- 6547 report builder
+
+static void test_build_cpu_status_json ()
+{
+    // periodic report: the full TASK-29 field set, ev=0
+    const Json_de periodic = deBuildCpuStatusJson("board-1", 42, 7,
+                                                CPU_BOARD_STATE_FREE,
+                                                CPU_REPORT_EVENT_PERIODIC);
+    check(periodic["bd"].get<std::string>() == "board-1", "bd = board id");
+    check(periodic["u"].get<int>() == 42, "u = board usage");
+    check(periodic["pu"].get<int>() == 7, "pu = process usage");
+    check(periodic["s"].get<int>() == CPU_BOARD_STATE_FREE, "s = board state");
+    check(periodic["ev"].get<int>() == CPU_REPORT_EVENT_PERIODIC, "periodic ev=0");
+    check(periodic.size() == 5, "no field outside the 6547 contract");
+
+    // transition edges carry ev=1/2
+    check(deBuildCpuStatusJson("b", 95, 60, CPU_BOARD_STATE_SUPER_BUSY,
+                               CPU_REPORT_EVENT_BECAME_SUPER_BUSY)["ev"].get<int>() == 1,
+          "became-super-busy ev=1");
+    check(deBuildCpuStatusJson("b", 30, 5, CPU_BOARD_STATE_FREE,
+                               CPU_REPORT_EVENT_BECAME_FREE)["ev"].get<int>() == 2,
+          "became-free ev=2");
+
+    // u/pu are clamped to the 0..100 contract range
+    const Json_de clamped = deBuildCpuStatusJson("b", 250, -3,
+                                                 CPU_BOARD_STATE_SUPER_BUSY, 1);
+    check(clamped["u"].get<int>() == 100, "u clamped to 100");
+    check(clamped["pu"].get<int>() == 0, "pu clamped to 0");
+}
+
+
 int main ()
 {
     test_parse_real_format();
@@ -335,6 +367,7 @@ int main ()
     test_process_cpu_percent();
     test_board_id_env_wins();
     test_sampler_path_override();
+    test_build_cpu_status_json();
 
     std::printf("=== %d checks, %d failed ===\n", g_checks, g_fails);
     return g_fails ? 1 : 0;

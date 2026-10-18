@@ -48,6 +48,19 @@ namespace de
              */
             void sendMemoryStatus(const std::string &target_party_id) const;
 
+            /**
+             * @brief send this board's CPU report to the de_comm broker as
+             * TYPE_AndruavMessage_MODULE_CPU_STATUS (6547) - intermodule
+             * only (internal_message=true), never to the GCS. The payload
+             * is built by the pure deBuildCpuStatusJson(); modules never
+             * send CPU state on 1008 themselves. CModule's health thread
+             * calls this automatically on board busy/free transitions and
+             * every cpu_monitor.report_s.
+             */
+            void sendCpuStatus(const std::string &board_id, const int board_usage_percent,
+                               const int process_usage_percent, const int board_state,
+                               const int report_event) const;
+
             // Phase-3 capability advert helpers - thin pass-throughs to
             // CModule (see de_module.hpp for the semantics).
             bool setCapabilities(const std::vector<std::string> &adverts);

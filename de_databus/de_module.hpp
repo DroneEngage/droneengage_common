@@ -16,6 +16,7 @@
 #include "udpClient.hpp"
 #include "unixDgramClient.hpp"
 #include "messages.hpp"
+#include "de_cpu_monitor.hpp"
 #include "../helpers/helpers.hpp"
 using Json_de = nlohmann::json;
 
@@ -374,8 +375,25 @@ typedef std::function<Json_de (const std::string& id,
              */
             void healthHeartbeatLoop ();
 
+            /**
+             * @brief TASK-31 (GL-0038): one 1 Hz board CPU sample -> 6547
+             * report to de_comm on a busy/free transition edge and every
+             * cpu_monitor.report_s. Runs only on the health thread.
+             */
+            void cpuReportTick (const uint64_t now_ms);
+
             std::thread       m_health_thread;
             std::atomic<bool> m_health_thread_exit {false};
+
+            // TASK-31 (GL-0038) board CPU reporting state (health thread only)
+            CpuMonitorConfig  m_cpu_monitor_config;
+            CCpuMonitor       m_cpu_monitor;
+            ProcCpuTimes      m_prev_proc_times;
+            uint64_t          m_prev_proc_ms           = 0;
+            bool              m_have_prev_proc         = false;
+            uint64_t          m_last_cpu_report_ms     = 0;
+            long              m_clock_ticks_per_s      = 100;
+            std::string       m_board_id;
     };
 };
 };

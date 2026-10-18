@@ -317,7 +317,14 @@ is re-sent while the load is steady.
 
 Each module reports its board to de_comm on intermodule message 6547
 (`TYPE_AndruavMessage_MODULE_CPU_STATUS`); de_comm aggregates all boards
-into the unit CPU state sent to the GCS as 1008 `CP`/`MI`. Tests:
+into the unit CPU state sent to the GCS as 1008 `CP`/`MI`. The reporting
+is automatic (GL-0038): `CModule::init()` reads `cpu_monitor` and the
+health thread samples the board once a second — a report goes out on a
+busy/free transition edge (`ev` = BECAME_*) and every `report_s`
+(`ev` = PERIODIC). `enabled:false` sends nothing. The payload is built
+by the pure `deBuildCpuStatusJson()` and sent via
+`CFacade_Base::sendCpuStatus()` (`internal_message=true`, never to the
+GCS; modules never send CPU on 1008). Tests:
 `make -C test test_cpu_monitor && ./test/test_cpu_monitor`.
 
 ## Unit CPU Aggregator (`de_databus/de_cpu_aggregator`)

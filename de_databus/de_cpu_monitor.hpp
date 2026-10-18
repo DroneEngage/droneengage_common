@@ -133,6 +133,19 @@ bool deReadProcStatCpu (CpuTimes& out);
  */
 bool deReadProcSelfStatCpu (ProcCpuTimes& out);
 
+/**
+ * @brief the 6547 MODULE_CPU_STATUS report body (the message "ms"
+ * object): {bd board id, u board whole-system %, pu this process %,
+ * s CPU_BOARD_STATE_*, ev CPU_REPORT_EVENT_*}. u/pu are clamped to
+ * 0..100 per the TASK-29 contract. Pure - unit-tested without a
+ * socket; CFacade_Base::sendCpuStatus() is the sender.
+ */
+Json_de deBuildCpuStatusJson (const std::string& board_id,
+                              const int board_usage_percent,
+                              const int process_usage_percent,
+                              const int board_state,
+                              const int report_event);
+
 class CCpuMonitor
 {
     public:
