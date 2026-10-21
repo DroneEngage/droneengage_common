@@ -7,3 +7,6 @@ test/test_track_manager
 test/test_geo_projector_core
 test/test_cpu_monitor
 test/test_cpu_aggregator
+test/test_ai_box
+test/test_camera_registry
+test/test_overlay_target
