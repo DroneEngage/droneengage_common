@@ -1361,9 +1361,14 @@
 #define TYPE_AndruavMessage_MAVLINK_EVENTS                     6527
 
 /**
- * @brief DEAD/UNIMPLEMENTED - parser case exists but body is an empty
- * switch with "//TODO: LATER"; no sender anywhere.
- * @direction DEAD/UNUSED
+ * @brief IR camera detection control (hotspot/coldspot obs 6546 on/off).
+ * @direction WEB_TO_MODULE (de_ir_camera, via de_comm)
+ * @rate ON_DEMAND
+ * @discard NO - state change, must arrive
+ * fields: a int REQUIRED (TrackingTarget_ACTION_TRACKING_*: 4 ENABLE, 2 STOP, 3 PAUSE;
+ *  other values ignored). ENABLE resets tracks (fresh trk ids); STOP also halts the
+ *  thermal frames thread; PAUSE keeps streaming but sends no obs. Startup state comes
+ *  from config "detection_enabled" (default true). STOP/ENABLE reply with 6529.
  */
 #define TYPE_AndruavMessage_IR_CAMERA_MI48_ACTION              6528
 /**
