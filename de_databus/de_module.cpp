@@ -32,7 +32,7 @@ void de::comm::CModule::defineModule (
 }
 
 
-bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort,  int chunkSize, bool use_unix_socket)
+bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort,  int chunkSize, bool use_unix_socket, const std::string unix_socket_dir)
 {
     // Auto-detect chunk size when not explicitly configured (chunkSize <= 0).
     // Modules pass 0 when s2s_udp_packet_size is missing from their config.
@@ -55,20 +55,58 @@ bool de::comm::CModule::init (const std::string targetIP, int broadcatsPort, con
     
     if (m_use_unix_socket) {
         // Unix domain socket for localhost communication.
-        // Base dir is resolved at runtime: /run/de_comm (root, secure) or
-        // /tmp/de_comm (non-root fallback). See helpers::getUnixSocketBaseDir().
-        std::string baseDir = getUnixSocketBaseDir();
-        std::string brokerSocketPath = baseDir + "/de_comm_broker.sock";
-        std::string ownSocketPath = baseDir + "/de_comm_" + m_module_id + "_" + m_module_key + ".sock";
-        
+        // Base dir resolution: the "unix_socket_dir" config key, then the
+        // DE_UNIX_SOCKET_DIR env var, then /run/de_comm (root, secure) or
+        // /tmp/de_comm (non-root fallback). An empty return means the
+        // configured/env dir could not be created or is not writable.
+        // See helpers::getUnixSocketBaseDir().
+        const std::string baseDir = getUnixSocketBaseDir(unix_socket_dir);
+        std::string brokerSocketPath;
+        std::string ownSocketPath;
+
+        if (baseDir.empty())
+        {
+            std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "CModule::init - unix socket dir rejected; module bus falls back to UDP" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            m_use_unix_socket = false;
+        }
+        else
+        {
+            brokerSocketPath = baseDir + "/de_comm_broker.sock";
+            ownSocketPath = baseDir + "/de_comm_" + m_module_id + "_" + m_module_key + ".sock";
+
+            // AF_UNIX sun_path holds 108 bytes including the terminating
+            // NUL; a longer socket path could never bind and would be
+            // silently truncated by strncpy, so reject it here.
+            if (brokerSocketPath.size() >= sizeof(((struct sockaddr_un*)0)->sun_path) ||
+                ownSocketPath.size()    >= sizeof(((struct sockaddr_un*)0)->sun_path))
+            {
+                std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "CModule::init - unix socket path exceeds sun_path ("
+                          << sizeof(((struct sockaddr_un*)0)->sun_path) << " bytes): " << ownSocketPath
+                          << " - module bus falls back to UDP" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                m_use_unix_socket = false;
+            }
+        }
+
+        if (m_use_unix_socket) {
 #ifdef DEBUG
-        std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using Unix socket. broker:" << brokerSocketPath << " own:" << ownSocketPath << _NORMAL_CONSOLE_TEXT_ << std::endl;
+            std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using Unix socket. broker:" << brokerSocketPath << " own:" << ownSocketPath << _NORMAL_CONSOLE_TEXT_ << std::endl;
 #endif
-        cUnixDgramClient.init(brokerSocketPath.c_str(), ownSocketPath.c_str(), chunkSize);
-        createJSONID(true);
-        cUnixDgramClient.start();
-    } else {
-        // UDP for cross-board or when Unix socket is disabled
+            cUnixDgramClient.init(brokerSocketPath.c_str(), ownSocketPath.c_str(), chunkSize);
+            createJSONID(true);
+            cUnixDgramClient.start();
+
+            if (!cUnixDgramClient.isStarted()) {
+                // bind failed (e.g. dir became unwritable) — same fallback
+                // as a rejected dir: keep the module bus on UDP.
+                std::cout << _ERROR_CONSOLE_BOLD_TEXT_ << "CModule::init - unix socket bind failed; module bus falls back to UDP" << _NORMAL_CONSOLE_TEXT_ << std::endl;
+                m_use_unix_socket = false;
+            }
+        }
+    }
+
+    if (!m_use_unix_socket) {
+        // UDP for cross-board, when Unix socket is disabled, or when the
+        // unix socket dir/path/bind above was rejected.
 #ifdef DEBUG
         std::cout << _INFO_CONSOLE_TEXT << "CModule::init - Using UDP. targetIP:" << targetIP << " port:" << broadcatsPort << _NORMAL_CONSOLE_TEXT_ << std::endl;
 #endif

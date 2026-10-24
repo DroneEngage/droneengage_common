@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <cctype>
+#include <cstdlib>
 #include <algorithm>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -10,6 +11,7 @@
 #include <regex>
 #include <iomanip>
 
+#include "colors.hpp"
 #include "helpers.hpp"
 
 
@@ -376,8 +378,57 @@ static bool ensureDirExists(const std::string& dir)
     return false;
 }
 
-std::string getUnixSocketBaseDir()
+// Internal helper: mkdir -p for a full directory path. Returns true only
+// if the directory exists AND is writable by the current process after the
+// walk (created successfully, or already existed and is writable).
+static bool ensureDirPath(const std::string& dir)
 {
+    if (dir.empty())
+        return false;
+
+    std::size_t start = 0;
+    while (true)
+    {
+        std::size_t next = dir.find('/', start + 1);
+        std::string sub = (next == std::string::npos) ? dir : dir.substr(0, next);
+        if (!sub.empty() && (mkdir(sub.c_str(), 0775) != 0) && (errno != EEXIST))
+            return false;
+        if (next == std::string::npos)
+            break;
+        start = next;
+    }
+    return dirExistsAndWritable(dir);
+}
+
+std::string getUnixSocketBaseDir(const std::string& configured_dir)
+{
+    // Resolution order: the "unix_socket_dir" config key (configured_dir),
+    // then the DE_UNIX_SOCKET_DIR environment variable, then the defaults
+    // /run/de_comm (root) and /tmp/de_comm (non-root).
+    std::string dir = configured_dir;
+    if (dir.empty())
+    {
+        const char* env = std::getenv("DE_UNIX_SOCKET_DIR");
+        if (env != nullptr && env[0] != '\0')
+            dir = env;
+    }
+
+    if (!dir.empty())
+    {
+        // Strip trailing slashes so socket paths are built uniformly.
+        while (dir.size() > 1 && dir.back() == '/')
+            dir.pop_back();
+
+        if (ensureDirPath(dir))
+            return dir;
+
+        std::cout << _ERROR_CONSOLE_BOLD_TEXT_
+                  << "getUnixSocketBaseDir - socket dir '" << dir
+                  << "' cannot be created or is not writable"
+                  << _NORMAL_CONSOLE_TEXT_ << std::endl;
+        return "";
+    }
+
     // Preferred: /run/de_comm (root-owned, secure, FHS-standard for runtime sockets).
     // Fallback: /tmp/de_comm (world-writable, works for non-root users).
     const std::string runDir  = "/run/de_comm";

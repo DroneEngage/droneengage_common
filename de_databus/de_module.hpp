@@ -109,7 +109,7 @@ typedef std::function<Json_de (const std::string& id,
                  Json_de message_filter
             );
             
-            bool init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort, int chunkSize, bool use_unix_socket = false) ;
+            bool init (const std::string targetIP, int broadcatsPort, const std::string host, int listenningPort, int chunkSize, bool use_unix_socket = false, const std::string unix_socket_dir = "") ;
             bool uninit ();
             
 

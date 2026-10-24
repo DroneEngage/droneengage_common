@@ -107,13 +107,20 @@ bool isRunningAsRoot();
 /**
  * @brief Resolve the Unix domain socket base directory for de_comm.
  *
- * Tries /run/de_comm first (root-owned, secure). If the process does not
- * have permission to create it (EACCES — non-root user), falls back to
- * /tmp/de_comm (world-writable, less secure but works without root).
+ * Resolution order:
+ *  1. configured_dir — the module's "unix_socket_dir" config key;
+ *  2. the DE_UNIX_SOCKET_DIR environment variable;
+ *  3. /run/de_comm first (root-owned, secure), then /tmp/de_comm
+ *     (world-writable, works for non-root users) when neither is set.
+ *
  * The directory is created (mkdir -p) if it does not exist.
  *
+ * @param configured_dir optional directory override; pass "" when unset.
  * @return The base directory path (no trailing slash), e.g. "/run/de_comm".
+ *         Returns "" when a configured/env directory was given but could
+ *         not be created or is not writable — callers should treat "" as
+ *         "rejected" and keep the module bus on UDP.
  */
-std::string getUnixSocketBaseDir();
+std::string getUnixSocketBaseDir(const std::string& configured_dir = "");
 
 #endif
